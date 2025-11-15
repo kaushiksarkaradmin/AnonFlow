@@ -34,7 +34,7 @@ service cloud.firestore {
      */
     match /userTokens/{digitalToken} {
       allow get: if true;
-      allow list: if false;
+      allow list: if true;
 
       allow create: if isSignedIn() && request.auth.uid == digitalToken;
       allow update: if isSignedIn() && request.auth.uid == digitalToken;
