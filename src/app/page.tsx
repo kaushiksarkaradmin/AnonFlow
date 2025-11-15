@@ -7,10 +7,28 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { usePosts } from '@/hooks/use-posts';
 import { useAnonUser } from '@/hooks/use-anon-user';
 import type { Post } from '@/lib/types';
+import { useEffect, useMemo, useState } from 'react';
+
+// Fisher-Yates shuffle algorithm
+function shufflePosts(array: Post[]): Post[] {
+  const newArray = [...array];
+  for (let i = newArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+  }
+  return newArray;
+}
 
 export default function Home() {
   const { posts, addPost, isLoading } = usePosts();
   const userToken = useAnonUser();
+  const [shuffledPosts, setShuffledPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    if(!isLoading) {
+      setShuffledPosts(shufflePosts(posts));
+    }
+  }, [posts, isLoading]);
 
   const handlePostSuccess = (newPostContent: string) => {
     if (userToken) {
@@ -47,8 +65,8 @@ export default function Home() {
                 <Skeleton className="h-28 w-full rounded-xl" />
                 <Skeleton className="h-24 w-full rounded-xl" />
               </>
-            ) : posts.length > 0 ? (
-              posts.map((post, index) => (
+            ) : shuffledPosts.length > 0 ? (
+              shuffledPosts.map((post, index) => (
                 <PostCard
                   key={post.id}
                   post={post}
