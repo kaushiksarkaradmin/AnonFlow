@@ -135,7 +135,7 @@ export default function Home() {
              {posts.length > 0 && (
               <div className="mt-4">
                 <Button variant="outline" onClick={() => setShowActivityLog(!showActivityLog)}>
-                  {showActivityLog ? 'Hide Activity Log' : 'View Activity Log'}
+                  {showActivityLog ? 'Hide Flow Log' : 'View Flow Log'}
                 </Button>
                 {showActivityLog && (
                   <div className="mt-4">
