@@ -8,6 +8,9 @@ import { usePosts } from '@/hooks/use-posts';
 import { useAnonUser } from '@/hooks/use-anon-user';
 import type { Post } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { generateAvatarColor } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 // Fisher-Yates shuffle algorithm
 function shufflePosts(array: Post[]): Post[] {
@@ -29,6 +32,11 @@ export default function Home() {
       setShuffledPosts(shufflePosts(posts));
     }
   }, [posts, isLoading]);
+
+  const activeUsers = useMemo(() => {
+    const userTokens = new Set(posts.map(p => p.authorToken));
+    return Array.from(userTokens);
+  }, [posts]);
 
   const handlePostSuccess = (newPostContent: string) => {
     if (userToken) {
@@ -57,6 +65,31 @@ export default function Home() {
           </div>
 
           <PostForm onPostSuccess={handlePostSuccess} />
+
+          {activeUsers.length > 0 && (
+            <div className="mt-12">
+              <h2 className="text-lg font-semibold text-center mb-4 text-muted-foreground">Active Users</h2>
+              <div className="flex justify-center flex-wrap gap-2">
+                <TooltipProvider>
+                  {activeUsers.map(token => (
+                    <Tooltip key={token}>
+                      <TooltipTrigger>
+                        <Avatar>
+                          <AvatarFallback style={{ backgroundColor: generateAvatarColor(token) }} className="text-primary-foreground font-bold">
+                            {token.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Anonymous User</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  ))}
+                </TooltipProvider>
+              </div>
+            </div>
+          )}
+
 
           <div className="mt-12 space-y-6">
             {isLoading ? (
