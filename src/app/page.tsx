@@ -13,6 +13,8 @@ import { generateAvatarColor } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
+import { Card, CardContent } from '@/components/ui/card';
+import { formatDistanceToNow } from 'date-fns';
 
 // Fisher-Yates shuffle algorithm
 function shufflePosts(array: Post[]): Post[] {
@@ -65,8 +67,8 @@ export default function Home() {
     }, {} as Record<string, string>) || {};
   }, [userTokens]);
 
-  const threadedPosts = useMemo(() => {
-    if (!posts) return [];
+  const { threadedPosts, postMap } = useMemo(() => {
+    if (!posts) return { threadedPosts: [], postMap: {} };
     
     const postMap: Record<string, Post> = {};
     const topLevelPosts: Post[] = [];
@@ -84,7 +86,7 @@ export default function Home() {
         }
     });
 
-    return topLevelPosts;
+    return { threadedPosts: topLevelPosts, postMap };
   }, [posts]);
 
 
@@ -97,15 +99,18 @@ export default function Home() {
     return threadedPosts || [];
   }, [threadedPosts]);
 
-  const activeUsers = useMemo(() => {
-    if (!userTokens) return [];
-    const uniqueTokens = new Map<string, UserToken>();
-    // Get the most recent token for each user, as there could be duplicates if displayName changes.
-    userTokens.forEach(token => {
-        uniqueTokens.set(token.digitalToken, token);
-    });
-    return Array.from(uniqueTokens.values());
-  }, [userTokens]);
+  const getActivityTimestamp = (post: Post) => {
+    if (!post.createdAt) return '';
+    if (post.createdAt instanceof Date) {
+      return formatDistanceToNow(post.createdAt, { addSuffix: true });
+    }
+    // Handle Firestore ServerTimestamp
+    if ('toDate' in post.createdAt) {
+      return formatDistanceToNow((post.createdAt as any).toDate(), { addSuffix: true });
+    }
+    // Fallback for string or number
+    return formatDistanceToNow(new Date(post.createdAt as any), { addSuffix: true });
+  }
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -128,30 +133,30 @@ export default function Home() {
 
           <PostForm onPostSuccess={handlePostSuccess} />
 
-          {activeUsers.length > 0 && (
+          {posts.length > 0 && (
             <div className="mt-12">
-              <h2 className="text-lg font-semibold text-center mb-4 text-muted-foreground">Active Users</h2>
-              <div className="flex justify-center flex-wrap gap-2">
-                <TooltipProvider>
-                  {activeUsers.map(token => (
-                    <Tooltip key={token.digitalToken}>
-                      <TooltipTrigger>
-                        <Avatar>
-                          <AvatarFallback style={{ backgroundColor: generateAvatarColor(token.digitalToken) }} className="text-primary-foreground font-bold">
-                            {token.digitalToken.substring(0, 2).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{token.displayName}</p>
-                      </TooltipContent>
-                    </Tooltip>
+              <h2 className="text-lg font-semibold text-center mb-4 text-muted-foreground">Activity Log</h2>
+              <Card>
+                <CardContent className="p-4 space-y-3">
+                  {posts.slice(0, 5).map(post => (
+                    <div key={post.id} className="text-sm text-muted-foreground">
+                      <span className="font-semibold text-primary">{userTokenMap[post.digitalToken] || 'Anonymous'}</span>
+                      {post.parentId && postMap[post.parentId] ? (
+                        <>
+                          <span> has replied to </span>
+                          <span className="font-semibold text-primary">{userTokenMap[postMap[post.parentId].digitalToken] || 'Anonymous'}</span>
+                          <span>'s post.</span>
+                        </>
+                      ) : (
+                        <span> has posted on the Flow.</span>
+                      )}
+                      <span className="text-xs ml-2">({getActivityTimestamp(post)})</span>
+                    </div>
                   ))}
-                </TooltipProvider>
-              </div>
+                </CardContent>
+              </Card>
             </div>
           )}
-
 
           <div className="mt-12 space-y-6">
             {isLoading ? (
