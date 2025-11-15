@@ -28,16 +28,13 @@ export default function Home() {
   const { posts, addPost, isLoading } = usePosts();
   const digitalToken = useAnonUser();
   
-  const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
-
-  useEffect(() => {
+  const displayedPosts = useMemo(() => {
     if (posts && posts.length > 0) {
-        const [newest, ...rest] = posts;
-        const shuffledRest = shufflePosts(rest);
-        setDisplayedPosts([newest, ...shuffledRest]);
-    } else if (posts) { // posts is not null/undefined but empty
-        setDisplayedPosts([]);
+      const [newest, ...rest] = posts;
+      const shuffledRest = shufflePosts(rest);
+      return [newest, ...shuffledRest];
     }
+    return posts || [];
   }, [posts]);
 
 
