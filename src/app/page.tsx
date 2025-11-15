@@ -1,3 +1,4 @@
+
 'use client';
 
 import { SiteHeader } from '@/components/site-header';
@@ -142,7 +143,6 @@ export default function Home() {
               </Button>
               {showActivityLog && (
                 <div className="mt-4">
-                  <h2 className="text-lg font-semibold text-center mb-4 text-muted-foreground">Activity Log</h2>
                   <Card>
                     <CardContent className="p-4 space-y-3 text-left">
                       {posts.slice(0, 5).map(post => (
