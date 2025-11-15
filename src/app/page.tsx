@@ -17,6 +17,7 @@ function shufflePosts(array: Post[]): Post[] {
   if (!array) return [];
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
+    // This is safe to run on client only, and a new random number on each shuffle is intended.
     const j = Math.floor(Math.random() * (i + 1));
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
@@ -31,13 +32,14 @@ export default function Home() {
 
   useEffect(() => {
     if (posts && posts.length > 0) {
-      const [newest, ...rest] = posts;
-      const shuffledRest = shufflePosts(rest);
-      setDisplayedPosts([newest, ...shuffledRest]);
-    } else {
-      setDisplayedPosts([]);
+        const [newest, ...rest] = posts;
+        const shuffledRest = shufflePosts(rest);
+        setDisplayedPosts([newest, ...shuffledRest]);
+    } else if (posts) { // posts is not null/undefined but empty
+        setDisplayedPosts([]);
     }
   }, [posts]);
+
 
   const activeUsers = useMemo(() => {
     if (!posts) return [];
