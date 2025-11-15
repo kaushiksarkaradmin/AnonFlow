@@ -17,7 +17,6 @@ function shufflePosts(array: Post[]): Post[] {
   if (!array) return [];
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
-    // Use a pseudo-random number generator for deterministic shuffling on client, but this is fine for now
     const j = Math.floor(Math.random() * (i + 1));
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
@@ -28,13 +27,16 @@ export default function Home() {
   const { posts, addPost, isLoading } = usePosts();
   const digitalToken = useAnonUser();
   
-  const shuffledPosts = useMemo(() => {
-    if (posts) {
-      // Shuffling is a side-effect, but we do it in useMemo for simplicity here.
-      // This will only re-run when `posts` changes.
-      return shufflePosts(posts);
+  const [displayedPosts, setDisplayedPosts] = useState<Post[]>([]);
+
+  useEffect(() => {
+    if (posts && posts.length > 0) {
+      const [newest, ...rest] = posts;
+      const shuffledRest = shufflePosts(rest);
+      setDisplayedPosts([newest, ...shuffledRest]);
+    } else {
+      setDisplayedPosts([]);
     }
-    return [];
   }, [posts]);
 
   const activeUsers = useMemo(() => {
@@ -101,8 +103,8 @@ export default function Home() {
                 <Skeleton className="h-28 w-full rounded-xl" />
                 <Skeleton className="h-24 w-full rounded-xl" />
               </>
-            ) : shuffledPosts.length > 0 ? (
-              shuffledPosts.map((post, index) => (
+            ) : displayedPosts.length > 0 ? (
+              displayedPosts.map((post, index) => (
                 <PostCard
                   key={post.id}
                   post={post}
