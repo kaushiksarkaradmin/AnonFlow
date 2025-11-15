@@ -1,0 +1,104 @@
+{
+  "entities": {
+    "Post": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Post",
+      "type": "object",
+      "description": "Represents a post in the anonymous timeline.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the post."
+        },
+        "content": {
+          "type": "string",
+          "description": "The content of the post."
+        },
+        "digitalToken": {
+          "type": "string",
+          "description": "The digital token of the user who created the post. (Relationship: User 1:N Post)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the post was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "content",
+        "digitalToken",
+        "createdAt"
+      ]
+    },
+    "UserToken": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserToken",
+      "type": "object",
+      "description": "Represents a user's unique digital token.",
+      "properties": {
+        "digitalToken": {
+          "type": "string",
+          "description": "Unique digital token generated for the user."
+        },
+        "ipAddress": {
+          "type": "string",
+          "description": "The IP address of the user used to generate the digital token."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "Timestamp indicating when the token was created.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "digitalToken",
+        "ipAddress",
+        "createdAt"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/userTokens/{digitalToken}",
+        "definition": {
+          "entityName": "UserToken",
+          "schema": {
+            "$ref": "#/backend/entities/UserToken"
+          },
+          "description": "Stores user digital tokens. The document ID is the digitalToken. Includes ipAddress and createdAt timestamps.",
+          "params": [
+            {
+              "name": "digitalToken",
+              "description": "The unique digital token identifying the user."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/posts/{postId}",
+        "definition": {
+          "entityName": "Post",
+          "schema": {
+            "$ref": "#/backend/entities/Post"
+          },
+          "description": "Stores all posts. Includes the digitalToken of the user who created the post for authorization independence.",
+          "params": [
+            {
+              "name": "postId",
+              "description": "The unique identifier for the post."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "Given the requirements for anonymous posting to a public timeline, IP address tracking for digital token creation, and cache synchronization, the following Firestore structure is recommended:\n\n1.  `/userTokens/{digitalToken}`: This collection stores user digital tokens. The document ID is the `digitalToken` itself, ensuring uniqueness. This enables quick lookups by `digitalToken`.\n2.  `/posts/{postId}`: This collection stores all posts. All posts are stored in a single collection to enable a global timeline view.  Each post contains a `digitalToken` field, identifying the user who created the post. There are no subcollections. This simplifies querying for all posts or posts by a specific user.\n\n**Authorization Independence (Denormalization):**\n*   The `posts` collection includes the `digitalToken` of the user who created the post. This eliminates the need to perform `get()` operations to verify the user's identity when listing or moderating posts. All necessary information for security rules is contained within the post document itself.\n\n**QAPs (Rules are not Filters):**\n*   **Secure List Operation:** The `/posts` collection can be listed securely because all posts are stored in a single collection with a consistent security posture. The `digitalToken` within each post enables rules to control access based on user identity without needing to filter based on the document content.\n*   **Content Moderation:** Because posts are stored in a single collection, moderation tools can easily query and manage all posts. Security rules can grant administrative access to moderation tools without compromising user data.\n\nThis structure prioritizes simplicity and security by avoiding hierarchical dependencies and enabling clear, enforceable security rules."
+  }
+}

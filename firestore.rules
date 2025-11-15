@@ -1,0 +1,79 @@
+/**
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a public timeline where all posts are visible to all users.
+ *
+ * Data Structure:
+ * - /userTokens/{digitalToken}: Stores user digital tokens, with the digitalToken as the document ID.
+ * - /posts/{postId}: Stores all posts in a single collection for the public timeline.
+ *
+ * Key Security Decisions:
+ * - Posts are publicly readable.
+ * - Posts can only be created by authenticated users (anonymous auth enabled).
+ * - Only the user who created a post can update or delete it.
+ * - User listing is disallowed.
+ *
+ * Denormalization for Authorization:
+ * - The /posts/{postId} documents include a 'digitalToken' field to enable authorization without requiring additional reads.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Controls access to user tokens.
+     * @path /userTokens/{digitalToken}
+     * @allow (create) If the request.auth.uid matches the digitalToken, create is allowed to create its userToken.
+     * @deny (create) If the request.auth.uid does not match the digitalToken, create is denied.
+     * @allow (get) Allow get requests for all users.
+     * @allow (list) Allow list requests for all users.
+     * @allow (update) If the request.auth.uid matches the digitalToken, update is allowed to update its userToken.
+     * @deny (update) If the request.auth.uid does not match the digitalToken, update is denied.
+     * @allow (delete) If the request.auth.uid matches the digitalToken, delete is allowed to delete its userToken.
+     * @deny (delete) If the request.auth.uid does not match the digitalToken, delete is denied.
+     * @principle Enforces document ownership for writes, allows public reads.
+     */
+    match /userTokens/{digitalToken} {
+      allow get: if true;
+      allow list: if false;
+
+      allow create: if isSignedIn() && request.auth.uid == digitalToken;
+      allow update: if isSignedIn() && request.auth.uid == digitalToken;
+      allow delete: if isSignedIn() && isExistingOwner(digitalToken);
+    }
+
+    /**
+     * @description Controls access to posts.
+     * @path /posts/{postId}
+     * @allow (create) Any signed-in user can create a post, provided the digitalToken matches their auth.uid.
+     * @deny (create) If the digitalToken doesn't match the auth.uid, creation is denied.
+     * @allow (get) All users can get any post.
+     * @allow (list) All users can list all posts.
+     * @allow (update) Only the user who created the post can update it.
+     * @deny (update) If the user is not the original creator, update is denied.
+     * @allow (delete) Only the user who created the post can delete it.
+     * @deny (delete) If the user is not the original creator, deletion is denied.
+     * @principle Allows public reads, enforces document ownership for writes.
+     */
+    match /posts/{postId} {
+      allow get: if true;
+      allow list: if true;
+
+      allow create: if isSignedIn() && request.resource.data.digitalToken == request.auth.uid;
+      allow update: if isSignedIn() && isExistingOwner(resource.data.digitalToken);
+      allow delete: if isSignedIn() && isExistingOwner(resource.data.digitalToken);
+    }
+  }
+
+  // Helper functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isSignedIn() && isOwner(userId) && resource != null;
+  }
+}
