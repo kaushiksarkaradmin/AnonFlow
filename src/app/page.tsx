@@ -132,40 +132,39 @@ export default function Home() {
                 Hi! <span className="font-semibold text-primary">{displayName}</span>
               </p>
             )}
+             {posts.length > 0 && (
+              <div className="mt-4">
+                <Button variant="ghost" onClick={() => setShowActivityLog(!showActivityLog)}>
+                  {showActivityLog ? 'Hide Activity Log' : 'View Activity Log'}
+                </Button>
+                {showActivityLog && (
+                  <div className="mt-4">
+                    <Card>
+                      <CardContent className="p-4 space-y-3 text-left">
+                        {posts.slice(0, 5).map(post => (
+                          <div key={post.id} className="text-sm text-muted-foreground">
+                            <span className="font-semibold text-primary">{userTokenMap[post.digitalToken] || 'Anonymous'}</span>
+                            {post.parentId && postMap[post.parentId] ? (
+                              <>
+                                <span> has replied to </span>
+                                <span className="font-semibold text-primary">{userTokenMap[postMap[post.parentId].digitalToken] || 'Anonymous'}</span>
+                                <span>'s post.</span>
+                              </>
+                            ) : (
+                              <span> has posted on the Flow.</span>
+                            )}
+                            <span className="text-xs ml-2">({getActivityTimestamp(post)})</span>
+                          </div>
+                        ))}
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <PostForm onPostSuccess={handlePostSuccess} />
-
-          {posts.length > 0 && (
-            <div className="mt-12 text-center">
-              <Button variant="ghost" onClick={() => setShowActivityLog(!showActivityLog)}>
-                {showActivityLog ? 'Hide Activity Log' : 'View Activity Log'}
-              </Button>
-              {showActivityLog && (
-                <div className="mt-4">
-                  <Card>
-                    <CardContent className="p-4 space-y-3 text-left">
-                      {posts.slice(0, 5).map(post => (
-                        <div key={post.id} className="text-sm text-muted-foreground">
-                          <span className="font-semibold text-primary">{userTokenMap[post.digitalToken] || 'Anonymous'}</span>
-                          {post.parentId && postMap[post.parentId] ? (
-                            <>
-                              <span> has replied to </span>
-                              <span className="font-semibold text-primary">{userTokenMap[postMap[post.parentId].digitalToken] || 'Anonymous'}</span>
-                              <span>'s post.</span>
-                            </>
-                          ) : (
-                            <span> has posted on the Flow.</span>
-                          )}
-                          <span className="text-xs ml-2">({getActivityTimestamp(post)})</span>
-                        </div>
-                      ))}
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-            </div>
-          )}
 
           <div className="mt-12 space-y-6">
             {isLoading ? (
