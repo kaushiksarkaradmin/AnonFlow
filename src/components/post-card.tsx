@@ -4,11 +4,13 @@ import { formatDistanceToNow } from 'date-fns';
 import type { Post } from '@/lib/types';
 import { cn, generateAvatarColor } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare } from 'lucide-react';
 import { HTMLAttributes, useState } from 'react';
 import { PostForm } from './post-form';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ScrollArea } from './ui/scroll-area';
 
 interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
   post: Post;
@@ -40,6 +42,8 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
     setIsReplying(false);
   };
 
+  const hasReplies = post.replies && post.replies.length > 0;
+
   return (
     <Card className={cn("overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300", className)} {...props}>
       <CardHeader className="flex flex-row items-center gap-4 p-4 bg-card">
@@ -58,7 +62,35 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
       <CardContent className="p-4 pt-0">
         <p className="whitespace-pre-wrap text-foreground/90">{post.content}</p>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-end">
+      <CardFooter className="p-4 pt-0 flex justify-end gap-2">
+        {hasReplies && (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm">
+                View {post.replies?.length} {post.replies?.length === 1 ? 'Comment' : 'Comments'}
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-xl">
+              <DialogHeader>
+                <DialogTitle>Replies</DialogTitle>
+              </DialogHeader>
+              <ScrollArea className="max-h-[60vh] pr-6">
+                <div className="space-y-4">
+                  {post.replies?.map((reply) => (
+                    <PostCard
+                      key={reply.id}
+                      post={reply}
+                      displayName={userTokenMap[reply.digitalToken] || 'Anonymous'}
+                      onReply={onReply}
+                      userTokenMap={userTokenMap}
+                      className="shadow-none border"
+                    />
+                  ))}
+                </div>
+              </ScrollArea>
+            </DialogContent>
+          </Dialog>
+        )}
         {!post.parentId && (
              <Button variant="ghost" size="sm" onClick={() => setIsReplying(!isReplying)}>
                 <MessageSquare className="mr-2 h-4 w-4" />
@@ -69,25 +101,9 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
       
       {isReplying && (
         <div className="p-4 border-t">
-          <PostForm onPostSuccess={handleReplySuccess} placeholder="Write a reply..." />
+          <PostForm onPostSuccess={handleReplySuccess} placeholder="Write a reply..." isReplyForm={true} />
         </div>
       )}
-      
-      {post.replies && post.replies.length > 0 && (
-        <div className="pl-8 pr-4 pb-4 border-t">
-          {post.replies.map((reply) => (
-            <div key={reply.id} className="mt-4">
-                 <PostCard
-                    post={reply}
-                    displayName={userTokenMap[reply.digitalToken] || 'Anonymous'}
-                    onReply={onReply}
-                    userTokenMap={userTokenMap}
-                />
-            </div>
-          ))}
-        </div>
-      )}
-
     </Card>
   );
 }
