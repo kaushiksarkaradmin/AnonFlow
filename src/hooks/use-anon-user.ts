@@ -15,12 +15,15 @@ export function useAnonUser() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
-  const [displayName, setDisplayName] = useState<string | null>(() => {
-    if (typeof window !== 'undefined') {
-      return localStorage.getItem(USER_DISPLAY_NAME_KEY);
+  const [displayName, setDisplayName] = useState<string | null>(null);
+
+  useEffect(() => {
+    // This effect runs only on the client after hydration
+    const storedName = localStorage.getItem(USER_DISPLAY_NAME_KEY);
+    if (storedName) {
+      setDisplayName(storedName);
     }
-    return null;
-  });
+  }, []);
 
   const userTokenRef = useMemoFirebase(
     () => (firestore && user ? doc(firestore, 'userTokens', user.uid) : null),
@@ -51,15 +54,19 @@ export function useAnonUser() {
           createdAt: serverTimestamp(),
         };
         setDocumentNonBlocking(userTokenRef, tokenData, { merge: false });
-        setDisplayName(newName);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(USER_DISPLAY_NAME_KEY, newName);
+        if (displayName !== newName) {
+            setDisplayName(newName);
+            if (typeof window !== 'undefined') {
+                localStorage.setItem(USER_DISPLAY_NAME_KEY, newName);
+            }
         }
       } else {
         // Document exists, sync state with Firestore and local storage.
-        setDisplayName(userTokenDoc.displayName);
-        if (typeof window !== 'undefined') {
-            localStorage.setItem(USER_DISPLAY_NAME_KEY, userTokenDoc.displayName);
+        if (displayName !== userTokenDoc.displayName) {
+          setDisplayName(userTokenDoc.displayName);
+          if (typeof window !== 'undefined') {
+              localStorage.setItem(USER_DISPLAY_NAME_KEY, userTokenDoc.displayName);
+          }
         }
       }
     }
