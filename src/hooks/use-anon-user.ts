@@ -1,24 +1,41 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { v4 as uuidv4 } from 'uuid';
+
+import { useEffect } from 'react';
+import { useAuth, useUser } from '@/firebase';
+import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import SHA256 from 'crypto-js/sha256';
+import { v4 as uuidv4 } from 'uuid';
 
 const USER_TOKEN_KEY = 'anonflow-user-token';
 
 export function useAnonUser() {
-  const [token, setToken] = useState<string | null>(null);
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
   useEffect(() => {
-    let userToken = localStorage.getItem(USER_TOKEN_KEY);
-    if (!userToken) {
-      const newId = uuidv4();
-      // We hash the UUID to create a non-reversible token.
-      // This is more secure than storing the raw UUID.
-      userToken = SHA256(newId).toString();
-      localStorage.setItem(USER_TOKEN_KEY, userToken);
+    if (!isUserLoading && !user) {
+      // Initiate sign-in, but don't block.
+      // The onAuthStateChanged listener in FirebaseProvider will handle the result.
+      initiateAnonymousSignIn(auth);
     }
-    setToken(userToken);
-  }, []);
+  }, [auth, user, isUserLoading]);
 
-  return token;
+  useEffect(() => {
+    if (user && firestore) {
+      const userTokenRef = doc(firestore, 'userTokens', user.uid);
+      const tokenData = {
+        digitalToken: user.uid,
+        // IP address is removed for privacy as requested
+        createdAt: new Date().toISOString(),
+      };
+      // Use non-blocking write. Errors will be caught by the global handler.
+      setDocumentNonBlocking(userTokenRef, tokenData, { merge: true });
+    }
+  }, [user, firestore]);
+
+  return user?.uid || null;
 }

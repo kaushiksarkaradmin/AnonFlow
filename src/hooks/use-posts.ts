@@ -1,39 +1,51 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import type { Post } from '@/lib/types';
-
-const POSTS_KEY = 'anonflow-posts';
+import {
+  useFirestore,
+  useCollection,
+  useMemoFirebase,
+} from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function usePosts() {
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const firestore = useFirestore();
+  const postsCollection = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'posts');
+  }, [firestore]);
 
-  useEffect(() => {
-    // This code runs only on the client, avoiding hydration mismatches.
-    try {
-      const storedPosts = localStorage.getItem(POSTS_KEY);
-      if (storedPosts) {
-        setPosts(JSON.parse(storedPosts));
+  const { data: posts, isLoading, error } = useCollection<Omit<Post, 'id'>>(postsCollection);
+
+  const addPost = useCallback(
+    (newPost: Omit<Post, 'id' | 'createdAt'>) => {
+      if (!postsCollection) {
+        console.error("Posts collection is not available.");
+        return;
       }
-    } catch (error) {
-      console.error("Failed to parse posts from localStorage", error);
-      setPosts([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      
+      const postWithTimestamp = {
+        ...newPost,
+        createdAt: serverTimestamp(),
+      };
+      
+      // Use non-blocking write. Errors will be caught by the global handler.
+      addDocumentNonBlocking(postsCollection, postWithTimestamp);
+    },
+    [postsCollection]
+  );
+  
+  if (error) {
+    console.error("Error fetching posts:", error);
+    // You might want to display a user-facing error message here
+  }
 
-  const addPost = useCallback((newPost: Post) => {
-    setPosts(prevPosts => {
-      const updatedPosts = [newPost, ...prevPosts];
-      try {
-        localStorage.setItem(POSTS_KEY, JSON.stringify(updatedPosts));
-      } catch (error) {
-        console.error("Failed to save posts to localStorage", error);
-      }
-      return updatedPosts;
-    });
-  }, []);
+  const sortedPosts = posts ? [...posts].sort((a, b) => {
+    const dateA = (a.createdAt as any)?.toDate?.() || new Date(0);
+    const dateB = (b.createdAt as any)?.toDate?.() || new Date(0);
+    return dateB.getTime() - dateA.getTime();
+  }) : [];
 
-  return { posts, isLoading, addPost };
+  return { posts: sortedPosts, isLoading, addPost };
 }

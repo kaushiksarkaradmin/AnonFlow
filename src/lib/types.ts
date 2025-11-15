@@ -1,6 +1,8 @@
+import { FieldValue } from "firebase/firestore";
+
 export type Post = {
   id: string;
   content: string;
-  authorToken: string;
-  timestamp: number;
+  digitalToken: string;
+  createdAt: FieldValue | Date;
 };

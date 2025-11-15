@@ -14,6 +14,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 
 // Fisher-Yates shuffle algorithm
 function shufflePosts(array: Post[]): Post[] {
+  if (!array) return [];
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -24,27 +25,26 @@ function shufflePosts(array: Post[]): Post[] {
 
 export default function Home() {
   const { posts, addPost, isLoading } = usePosts();
-  const userToken = useAnonUser();
+  const digitalToken = useAnonUser();
   const [shuffledPosts, setShuffledPosts] = useState<Post[]>([]);
 
   useEffect(() => {
-    if(!isLoading) {
+    if(!isLoading && posts) {
       setShuffledPosts(shufflePosts(posts));
     }
   }, [posts, isLoading]);
 
   const activeUsers = useMemo(() => {
-    const userTokens = new Set(posts.map(p => p.authorToken));
+    if (!posts) return [];
+    const userTokens = new Set(posts.map(p => p.digitalToken));
     return Array.from(userTokens);
   }, [posts]);
 
   const handlePostSuccess = (newPostContent: string) => {
-    if (userToken) {
-      const newPost: Post = {
-        id: `${Date.now()}-${userToken}`,
+    if (digitalToken) {
+      const newPost: Omit<Post, 'id' | 'createdAt'> = {
         content: newPostContent,
-        authorToken: userToken,
-        timestamp: Date.now(),
+        digitalToken: digitalToken,
       };
       addPost(newPost);
     }
