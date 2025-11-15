@@ -67,7 +67,7 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
           <Dialog>
             <DialogTrigger asChild>
               <Button variant="outline" size="sm">
-                View {post.replies?.length} {post.replies?.length === 1 ? 'Comment' : 'Comments'}
+                View {post.replies?.length} {post.replies?.length === 1 ? 'Reply' : 'Replies'}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-xl">
