@@ -119,6 +119,11 @@ export default function Home() {
             <p className="mt-3 text-lg text-muted-foreground">
               Share your thoughts with the world, anonymously.
             </p>
+            {displayName && (
+              <p className="mt-4 text-xl text-foreground">
+                Hi! <span className="font-semibold text-primary">{displayName}</span>
+              </p>
+            )}
           </div>
 
           <PostForm onPostSuccess={handlePostSuccess} />
