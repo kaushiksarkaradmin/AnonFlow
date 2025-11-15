@@ -41,9 +41,9 @@
           "type": "string",
           "description": "Unique digital token generated for the user."
         },
-        "ipAddress": {
+        "displayName": {
           "type": "string",
-          "description": "The IP address of the user used to generate the digital token."
+          "description": "A randomly generated display name for the user."
         },
         "createdAt": {
           "type": "string",
@@ -53,7 +53,7 @@
       },
       "required": [
         "digitalToken",
-        "ipAddress",
+        "displayName",
         "createdAt"
       ]
     }

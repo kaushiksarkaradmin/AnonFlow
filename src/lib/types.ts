@@ -6,3 +6,9 @@ export type Post = {
   digitalToken: string;
   createdAt: FieldValue | Date;
 };
+
+export type UserToken = {
+  digitalToken: string;
+  displayName: string;
+  createdAt: FieldValue | Date;
+};

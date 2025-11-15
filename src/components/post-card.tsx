@@ -9,11 +9,12 @@ import type { HTMLAttributes } from 'react';
 
 interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
   post: Post;
+  displayName: string;
 }
 
-export function PostCard({ post, className, ...props }: PostCardProps) {
+export function PostCard({ post, displayName, className, ...props }: PostCardProps) {
   const avatarColor = generateAvatarColor(post.digitalToken);
-  const avatarInitials = post.digitalToken.substring(0, 2).toUpperCase();
+  const avatarInitials = displayName.substring(0, 2).toUpperCase();
   
   const getTimestamp = () => {
     if (!post.createdAt) return 'a moment ago';
@@ -37,7 +38,7 @@ export function PostCard({ post, className, ...props }: PostCardProps) {
           </AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-          <span className="font-semibold text-sm text-foreground">Anonymous</span>
+          <span className="font-semibold text-sm text-foreground">{displayName}</span>
           <span className="text-xs text-muted-foreground">
             {getTimestamp()}
           </span>

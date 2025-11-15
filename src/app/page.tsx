@@ -6,11 +6,13 @@ import { PostCard } from '@/components/post-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { usePosts } from '@/hooks/use-posts';
 import { useAnonUser } from '@/hooks/use-anon-user';
-import type { Post } from '@/lib/types';
+import type { Post, UserToken } from '@/lib/types';
 import { useEffect, useMemo, useState } from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { generateAvatarColor } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { collection } from 'firebase/firestore';
 
 // Fisher-Yates shuffle algorithm
 function shufflePosts(array: Post[]): Post[] {
@@ -26,8 +28,15 @@ function shufflePosts(array: Post[]): Post[] {
 
 export default function Home() {
   const { posts, addPost, isLoading } = usePosts();
-  const digitalToken = useAnonUser();
-  
+  const { digitalToken, displayName } = useAnonUser();
+  const firestore = useFirestore();
+
+  const userTokensCollection = useMemoFirebase(
+    () => (firestore ? collection(firestore, 'userTokens') : null),
+    [firestore]
+  );
+  const { data: userTokens } = useCollection<UserToken>(userTokensCollection);
+
   const displayedPosts = useMemo(() => {
     if (posts && posts.length > 0) {
       const [newest, ...rest] = posts;
@@ -37,12 +46,15 @@ export default function Home() {
     return posts || [];
   }, [posts]);
 
-
   const activeUsers = useMemo(() => {
-    if (!posts) return [];
-    const userTokens = new Set(posts.map(p => p.digitalToken));
-    return Array.from(userTokens);
-  }, [posts]);
+    if (!userTokens) return [];
+    const uniqueTokens = new Map<string, UserToken>();
+    // Get the most recent token for each user, as there could be duplicates if displayName changes.
+    userTokens.forEach(token => {
+        uniqueTokens.set(token.digitalToken, token);
+    });
+    return Array.from(uniqueTokens.values());
+  }, [userTokens]);
 
   const handlePostSuccess = (newPostContent: string) => {
     if (digitalToken) {
@@ -53,6 +65,13 @@ export default function Home() {
       addPost(newPost);
     }
   };
+  
+  const userTokenMap = useMemo(() => {
+    return userTokens?.reduce((acc, token) => {
+      acc[token.digitalToken] = token.displayName;
+      return acc;
+    }, {} as Record<string, string>) || {};
+  }, [userTokens]);
 
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
@@ -76,16 +95,16 @@ export default function Home() {
               <div className="flex justify-center flex-wrap gap-2">
                 <TooltipProvider>
                   {activeUsers.map(token => (
-                    <Tooltip key={token}>
+                    <Tooltip key={token.digitalToken}>
                       <TooltipTrigger>
                         <Avatar>
-                          <AvatarFallback style={{ backgroundColor: generateAvatarColor(token) }} className="text-primary-foreground font-bold">
-                            {token.substring(0, 2).toUpperCase()}
+                          <AvatarFallback style={{ backgroundColor: generateAvatarColor(token.digitalToken) }} className="text-primary-foreground font-bold">
+                            {token.digitalToken.substring(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Anonymous User</p>
+                        <p>{token.displayName}</p>
                       </TooltipContent>
                     </Tooltip>
                   ))}
@@ -107,6 +126,7 @@ export default function Home() {
                 <PostCard
                   key={post.id}
                   post={post}
+                  displayName={userTokenMap[post.digitalToken] || 'Anonymous'}
                   style={{ animationDelay: `${index * 100}ms` }}
                   className="animate-post-in opacity-0"
                 />
