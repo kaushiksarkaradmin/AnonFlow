@@ -6,17 +6,23 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, query, orderBy, where } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function usePosts() {
   const firestore = useFirestore();
+  
   const postsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
     return collection(firestore, 'posts');
   }, [firestore]);
 
-  const { data: posts, isLoading, error } = useCollection<Omit<Post, 'id'>>(postsCollection);
+  const postsQuery = useMemoFirebase(() => {
+    if (!postsCollection) return null;
+    return query(postsCollection, orderBy('createdAt', 'desc'));
+  }, [postsCollection]);
+
+  const { data: posts, isLoading, error } = useCollection<Omit<Post, 'id'>>(postsQuery);
 
   const addPost = useCallback(
     (newPost: Omit<Post, 'id' | 'createdAt'>) => {
@@ -41,11 +47,5 @@ export function usePosts() {
     // You might want to display a user-facing error message here
   }
 
-  const sortedPosts = posts ? [...posts].sort((a, b) => {
-    const dateA = (a.createdAt as any)?.toDate?.() || new Date(0);
-    const dateB = (b.createdAt as any)?.toDate?.() || new Date(0);
-    return dateB.getTime() - dateA.getTime();
-  }) : [];
-
-  return { posts: sortedPosts, isLoading, addPost };
+  return { posts: posts || [], isLoading, addPost };
 }

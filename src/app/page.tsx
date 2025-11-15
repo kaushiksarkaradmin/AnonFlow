@@ -37,25 +37,6 @@ export default function Home() {
   );
   const { data: userTokens } = useCollection<UserToken>(userTokensCollection);
 
-  const displayedPosts = useMemo(() => {
-    if (posts && posts.length > 0) {
-      const [newest, ...rest] = posts;
-      const shuffledRest = shufflePosts(rest);
-      return [newest, ...shuffledRest];
-    }
-    return posts || [];
-  }, [posts]);
-
-  const activeUsers = useMemo(() => {
-    if (!userTokens) return [];
-    const uniqueTokens = new Map<string, UserToken>();
-    // Get the most recent token for each user, as there could be duplicates if displayName changes.
-    userTokens.forEach(token => {
-        uniqueTokens.set(token.digitalToken, token);
-    });
-    return Array.from(uniqueTokens.values());
-  }, [userTokens]);
-
   const handlePostSuccess = (newPostContent: string) => {
     if (digitalToken) {
       const newPost: Omit<Post, 'id' | 'createdAt'> = {
@@ -65,12 +46,65 @@ export default function Home() {
       addPost(newPost);
     }
   };
+
+  const handleReply = (replyContent: string, parentId: string) => {
+    if (digitalToken) {
+      const newReply: Omit<Post, 'id' | 'createdAt'> = {
+        content: replyContent,
+        digitalToken: digitalToken,
+        parentId: parentId,
+      };
+      addPost(newReply);
+    }
+  };
   
   const userTokenMap = useMemo(() => {
     return userTokens?.reduce((acc, token) => {
       acc[token.digitalToken] = token.displayName;
       return acc;
     }, {} as Record<string, string>) || {};
+  }, [userTokens]);
+
+  const threadedPosts = useMemo(() => {
+    if (!posts) return [];
+    
+    const postMap: Record<string, Post> = {};
+    const topLevelPosts: Post[] = [];
+
+    posts.forEach(post => {
+        post.replies = [];
+        postMap[post.id] = post;
+    });
+
+    posts.forEach(post => {
+        if (post.parentId && postMap[post.parentId]) {
+            postMap[post.parentId].replies?.push(post);
+        } else {
+            topLevelPosts.push(post);
+        }
+    });
+
+    return topLevelPosts;
+  }, [posts]);
+
+
+  const displayedPosts = useMemo(() => {
+    if (threadedPosts && threadedPosts.length > 0) {
+      const [newest, ...rest] = threadedPosts;
+      const shuffledRest = shufflePosts(rest);
+      return [newest, ...shuffledRest];
+    }
+    return threadedPosts || [];
+  }, [threadedPosts]);
+
+  const activeUsers = useMemo(() => {
+    if (!userTokens) return [];
+    const uniqueTokens = new Map<string, UserToken>();
+    // Get the most recent token for each user, as there could be duplicates if displayName changes.
+    userTokens.forEach(token => {
+        uniqueTokens.set(token.digitalToken, token);
+    });
+    return Array.from(uniqueTokens.values());
   }, [userTokens]);
 
   return (
@@ -127,6 +161,8 @@ export default function Home() {
                   key={post.id}
                   post={post}
                   displayName={userTokenMap[post.digitalToken] || 'Anonymous'}
+                  onReply={handleReply}
+                  userTokenMap={userTokenMap}
                   style={{ animationDelay: `${index * 100}ms` }}
                   className="animate-post-in opacity-0"
                 />

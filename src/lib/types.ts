@@ -5,6 +5,8 @@ export type Post = {
   content: string;
   digitalToken: string;
   createdAt: FieldValue | Date;
+  parentId?: string;
+  replies?: Post[];
 };
 
 export type UserToken = {

@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Post",
       "type": "object",
-      "description": "Represents a post in the anonymous timeline.",
+      "description": "Represents a post in the anonymous timeline. Can be a top-level post or a reply to another post.",
       "properties": {
         "id": {
           "type": "string",
@@ -22,6 +22,10 @@
           "type": "string",
           "description": "Timestamp indicating when the post was created.",
           "format": "date-time"
+        },
+        "parentId": {
+          "type": "string",
+          "description": "If this post is a reply, this is the ID of the parent post."
         }
       },
       "required": [
