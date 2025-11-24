@@ -87,10 +87,10 @@ service cloud.firestore {
   }
 
   function canUpdateReactions() {
-    // Any user can update the reactions.
+    // Check that the only fields being changed are within the reactions map.
+    // This allows for atomic updates using arrayUnion/arrayRemove.
+    let changedKeys = request.resource.data.diff(resource.data).affectedKeys;
     let reactionKeys = ['reactions.red', 'reactions.yellow', 'reactions.green'];
-    return request.resource.data.keys().hasAny(reactionKeys) &&
-           request.resource.data.keys().size() <= reactionKeys.length() &&
-           request.resource.data.keys().hasOnly(reactionKeys);
+    return changedKeys.hasOnly(reactionKeys);
   }
 }
