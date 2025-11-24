@@ -9,8 +9,9 @@
  * Key Security Decisions:
  * - Posts are publicly readable.
  * - Posts can only be created by authenticated users (anonymous auth enabled).
- * - Only the user who created a post can update or delete it.
- * - User listing is disallowed.
+ * - Only the user who created a post can delete it.
+ * - Users can update any post to add a reaction, but cannot change other fields.
+ * - User listing is allowed for the activity log feature.
  *
  * Denormalization for Authorization:
  * - The /posts/{postId} documents include a 'digitalToken' field to enable authorization without requiring additional reads.
@@ -48,18 +49,21 @@ service cloud.firestore {
      * @deny (create) If the digitalToken doesn't match the auth.uid, creation is denied.
      * @allow (get) All users can get any post.
      * @allow (list) All users can list all posts.
-     * @allow (update) Only the user who created the post can update it.
-     * @deny (update) If the user is not the original creator, update is denied.
+     * @allow (update) A signed-in user can update a post. If they are the owner, they can update the content. Any user can update the reactions.
+     * @deny (update) If the user is not the original creator and tries to update content, update is denied.
      * @allow (delete) Only the user who created the post can delete it.
      * @deny (delete) If the user is not the original creator, deletion is denied.
-     * @principle Allows public reads, enforces document ownership for writes.
+     * @principle Allows public reads, enforces document ownership for content writes, and allows reaction updates for all users.
      */
     match /posts/{postId} {
       allow get: if true;
       allow list: if true;
 
       allow create: if isSignedIn() && request.resource.data.digitalToken == request.auth.uid;
-      allow update: if isSignedIn() && isExistingOwner(resource.data.digitalToken);
+      allow update: if isSignedIn() && (
+                      (isExistingOwner(resource.data.digitalToken) && canUpdatePostContent(request.resource.data)) || 
+                      canUpdateReactions(request.resource.data)
+                    );
       allow delete: if isSignedIn() && isExistingOwner(resource.data.digitalToken);
     }
   }
@@ -75,5 +79,15 @@ service cloud.firestore {
 
   function isExistingOwner(userId) {
     return isSignedIn() && isOwner(userId) && resource != null;
+  }
+
+  function canUpdatePostContent(data) {
+    // Only content can be updated by the owner.
+    return data.keys().hasOnly(['content']);
+  }
+
+  function canUpdateReactions(data) {
+    // Any user can update the reactions.
+    return data.keys().hasOnly(['reactions']);
   }
 }

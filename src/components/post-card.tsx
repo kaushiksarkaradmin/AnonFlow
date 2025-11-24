@@ -6,11 +6,15 @@ import { cn, generateAvatarColor } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, Smile } from 'lucide-react';
 import { HTMLAttributes, useState } from 'react';
 import { PostForm } from './post-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Reactions } from './reactions';
+import { usePosts } from '@/hooks/use-posts';
+import { useAnonUser } from '@/hooks/use-anon-user';
 
 interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
   post: Post;
@@ -21,6 +25,8 @@ interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
 
 export function PostCard({ post, displayName, className, onReply, userTokenMap, ...props }: PostCardProps) {
   const [isReplying, setIsReplying] = useState(false);
+  const { digitalToken } = useAnonUser();
+  const { addReaction } = usePosts();
   const avatarColor = generateAvatarColor(post.digitalToken);
   const avatarInitials = displayName.substring(0, 2).toUpperCase();
   
@@ -40,6 +46,12 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
   const handleReplySuccess = (replyContent: string) => {
     onReply(replyContent, post.id);
     setIsReplying(false);
+  };
+
+  const handleReaction = (reaction: 'red' | 'yellow' | 'green') => {
+    if (digitalToken) {
+      addReaction(post.id, digitalToken, reaction);
+    }
   };
 
   const hasReplies = post.replies && post.replies.length > 0;
@@ -91,6 +103,21 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
             </DialogContent>
           </Dialog>
         )}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="ghost" size="sm">
+              <Smile className="mr-2 h-4 w-4" />
+              React
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-2">
+            <Reactions
+              reactions={post.reactions}
+              onReact={handleReaction}
+              userDigitalToken={digitalToken}
+            />
+          </PopoverContent>
+        </Popover>
         {!post.parentId && (
              <Button variant="ghost" size="sm" onClick={() => setIsReplying(!isReplying)}>
                 <MessageSquare className="mr-2 h-4 w-4" />
