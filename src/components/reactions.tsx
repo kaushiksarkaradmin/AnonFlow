@@ -11,19 +11,25 @@ interface ReactionsProps {
 }
 
 const reactionColors = {
-  red: 'bg-red-500',
-  yellow: 'bg-yellow-500',
   green: 'bg-green-500',
+  yellow: 'bg-yellow-500',
+  red: 'bg-red-500',
 };
 
 const reactionRingColors = {
-    red: 'ring-red-500',
-    yellow: 'ring-yellow-500',
     green: 'ring-green-500',
+    yellow: 'ring-yellow-500',
+    red: 'ring-red-500',
+}
+
+const reactionTooltips = {
+  green: 'Positive',
+  yellow: 'Neutral',
+  red: 'Negative',
 }
 
 export function Reactions({ reactions, onReact, userDigitalToken }: ReactionsProps) {
-  const reactionTypes: ReactionType[] = ['red', 'yellow', 'green'];
+  const reactionTypes: ReactionType[] = ['green', 'yellow', 'red'];
 
   return (
     <TooltipProvider>
@@ -50,7 +56,7 @@ export function Reactions({ reactions, onReact, userDigitalToken }: ReactionsPro
                 <span className="text-xs font-semibold text-muted-foreground">{count}</span>
               </div>
               <TooltipContent>
-                <p>{type.charAt(0).toUpperCase() + type.slice(1)}</p>
+                <p>{reactionTooltips[type]}</p>
               </TooltipContent>
             </Tooltip>
           );

@@ -1,16 +1,17 @@
 'use client';
-import { useCallback } from 'react';
-import type { Post } from '@/lib/types';
+import { useCallback, useState, useEffect } from 'react';
+import type { Post, ReactionType } from '@/lib/types';
 import {
   useFirestore,
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
 import { collection, doc, serverTimestamp, query, orderBy, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function usePosts() {
   const firestore = useFirestore();
+  const [localPosts, setLocalPosts] = useState<Post[] | null>(null);
   
   const postsCollection = useMemoFirebase(() => {
     if (!firestore) return null;
@@ -22,7 +23,13 @@ export function usePosts() {
     return query(postsCollection, orderBy('createdAt', 'desc'));
   }, [postsCollection]);
 
-  const { data: posts, isLoading, error } = useCollection<Post>(postsQuery);
+  const { data: serverPosts, isLoading, error } = useCollection<Post>(postsQuery);
+
+  useEffect(() => {
+    if (serverPosts) {
+      setLocalPosts(serverPosts);
+    }
+  }, [serverPosts]);
 
   const addPost = useCallback(
     (newPost: Omit<Post, 'id' | 'createdAt' | 'reactions'>) => {
@@ -37,56 +44,80 @@ export function usePosts() {
         reactions: { red: [], yellow: [], green: [] },
       };
       
-      // Use non-blocking write. Errors will be caught by the global handler.
       addDocumentNonBlocking(postsCollection, postWithTimestamp);
     },
     [postsCollection]
   );
   
   const addReaction = useCallback(
-    (postId: string, digitalToken: string, reaction: 'red' | 'yellow' | 'green') => {
+    (postId: string, digitalToken: string, reaction: ReactionType) => {
       if (!firestore) return;
 
+      // Optimistic UI update
+      setLocalPosts(prevPosts => {
+        if (!prevPosts) return null;
+        return prevPosts.map(p => {
+          if (p.id === postId) {
+            const newReactions = { ...(p.reactions || { red: [], yellow: [], green: [] }) };
+            const otherReactions: ReactionType[] = ['red', 'yellow', 'green'].filter(r => r !== reaction);
+            const userHasReacted = newReactions[reaction]?.includes(digitalToken);
+
+            // Toggle reaction
+            if (userHasReacted) {
+              newReactions[reaction] = newReactions[reaction]?.filter(token => token !== digitalToken);
+            } else {
+              newReactions[reaction] = [...(newReactions[reaction] || []), digitalToken];
+            }
+
+            // Remove from other reactions
+            otherReactions.forEach(r => {
+              newReactions[r] = newReactions[r]?.filter(token => token !== digitalToken);
+            });
+            
+            return { ...p, reactions: newReactions };
+          }
+          return p;
+        });
+      });
+
+      // Update firestore in the background
       const postRef = doc(firestore, 'posts', postId);
-      const currentPost = posts?.find(p => p.id === postId);
+      const currentPost = serverPosts?.find(p => p.id === postId);
       if (!currentPost) return;
 
       const batch = writeBatch(firestore);
 
       const otherReactions = (['red', 'yellow', 'green'] as const).filter(r => r !== reaction);
       
-      let alreadyReacted = false;
-      // if user already reacted with the same color, remove the reaction
       if (currentPost.reactions?.[reaction]?.includes(digitalToken)) {
-        alreadyReacted = true;
         batch.update(postRef, {
           [`reactions.${reaction}`]: arrayRemove(digitalToken)
         });
       } else {
-        // Add the new reaction
-         batch.update(postRef, {
+        batch.update(postRef, {
           [`reactions.${reaction}`]: arrayUnion(digitalToken)
         });
+        otherReactions.forEach(color => {
+          if (currentPost.reactions?.[color]?.includes(digitalToken)) {
+             batch.update(postRef, {
+              [`reactions.${color}`]: arrayRemove(digitalToken)
+            });
+          }
+        });
       }
-
-      // Remove user from other reaction colors
-      otherReactions.forEach(color => {
-        if (currentPost.reactions?.[color]?.includes(digitalToken)) {
-           batch.update(postRef, {
-            [`reactions.${color}`]: arrayRemove(digitalToken)
-          });
-        }
-      });
       
-      batch.commit().catch(err => console.error("Failed to update reaction", err));
+      batch.commit().catch(err => {
+        console.error("Failed to update reaction", err);
+        // Revert optimistic update on error
+        setLocalPosts(serverPosts);
+      });
 
-    }, [firestore, posts]
+    }, [firestore, serverPosts]
   );
   
   if (error) {
     console.error("Error fetching posts:", error);
-    // You might want to display a user-facing error message here
   }
 
-  return { posts: posts || [], isLoading, addPost, addReaction };
+  return { posts: localPosts || [], isLoading, addPost, addReaction };
 }

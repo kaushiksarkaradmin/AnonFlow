@@ -103,6 +103,12 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
             </DialogContent>
           </Dialog>
         )}
+        {!post.parentId && (
+             <Button variant="ghost" size="sm" onClick={() => setIsReplying(!isReplying)}>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Reply
+            </Button>
+        )}
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="sm">
@@ -118,12 +124,6 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
             />
           </PopoverContent>
         </Popover>
-        {!post.parentId && (
-             <Button variant="ghost" size="sm" onClick={() => setIsReplying(!isReplying)}>
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Reply
-            </Button>
-        )}
       </CardFooter>
       
       {isReplying && (
