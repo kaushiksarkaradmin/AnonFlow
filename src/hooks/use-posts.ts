@@ -53,26 +53,27 @@ export function usePosts() {
     (postId: string, digitalToken: string, reaction: ReactionType) => {
       if (!firestore) return;
 
+      const currentPost = (localPosts || serverPosts)?.find(p => p.id === postId);
+      if (!currentPost) return;
+
+      const userHasReactedWithColor = currentPost.reactions?.[reaction]?.includes(digitalToken);
+
       // Optimistic UI update
       setLocalPosts(prevPosts => {
         if (!prevPosts) return null;
         return prevPosts.map(p => {
           if (p.id === postId) {
             const newReactions = { ...(p.reactions || { red: [], yellow: [], green: [] }) };
-            const otherReactions: ReactionType[] = ['red', 'yellow', 'green'].filter(r => r !== reaction);
-            const userHasReacted = newReactions[reaction]?.includes(digitalToken);
-
-            // Toggle reaction
-            if (userHasReacted) {
-              newReactions[reaction] = newReactions[reaction]?.filter(token => token !== digitalToken);
-            } else {
-              newReactions[reaction] = [...(newReactions[reaction] || []), digitalToken];
-            }
-
-            // Remove from other reactions
-            otherReactions.forEach(r => {
-              newReactions[r] = newReactions[r]?.filter(token => token !== digitalToken);
+            
+            // Remove user from all reaction arrays first
+            (Object.keys(newReactions) as ReactionType[]).forEach(key => {
+              newReactions[key] = (newReactions[key] || []).filter(token => token !== digitalToken);
             });
+
+            // If the user wasn't already reacting with this color, add them.
+            if (!userHasReactedWithColor) {
+               newReactions[reaction] = [...(newReactions[reaction] || []), digitalToken];
+            }
             
             return { ...p, reactions: newReactions };
           }
@@ -82,37 +83,26 @@ export function usePosts() {
 
       // Update firestore in the background
       const postRef = doc(firestore, 'posts', postId);
-      const currentPost = serverPosts?.find(p => p.id === postId);
-      if (!currentPost) return;
-
       const batch = writeBatch(firestore);
+      const allReactionTypes: ReactionType[] = ['red', 'yellow', 'green'];
 
-      const otherReactions = (['red', 'yellow', 'green'] as const).filter(r => r !== reaction);
-      
-      if (currentPost.reactions?.[reaction]?.includes(digitalToken)) {
-        batch.update(postRef, {
-          [`reactions.${reaction}`]: arrayRemove(digitalToken)
-        });
-      } else {
-        batch.update(postRef, {
-          [`reactions.${reaction}`]: arrayUnion(digitalToken)
-        });
-        otherReactions.forEach(color => {
-          if (currentPost.reactions?.[color]?.includes(digitalToken)) {
-             batch.update(postRef, {
-              [`reactions.${color}`]: arrayRemove(digitalToken)
-            });
-          }
-        });
+      // Always remove the user from all reactions first to handle switching.
+      allReactionTypes.forEach(type => {
+        batch.update(postRef, { [`reactions.${type}`]: arrayRemove(digitalToken) });
+      });
+
+      // If it wasn't a toggle-off, add the new reaction.
+      if (!userHasReactedWithColor) {
+         batch.update(postRef, { [`reactions.${reaction}`]: arrayUnion(digitalToken) });
       }
       
       batch.commit().catch(err => {
         console.error("Failed to update reaction", err);
-        // Revert optimistic update on error
+        // Revert optimistic update on error by resetting to server state
         setLocalPosts(serverPosts);
       });
 
-    }, [firestore, serverPosts]
+    }, [firestore, serverPosts, localPosts]
   );
   
   if (error) {
