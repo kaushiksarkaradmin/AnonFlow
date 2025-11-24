@@ -61,8 +61,8 @@ service cloud.firestore {
 
       allow create: if isSignedIn() && request.resource.data.digitalToken == request.auth.uid;
       allow update: if isSignedIn() && (
-                      (isExistingOwner(resource.data.digitalToken) && canUpdatePostContent(request.resource.data)) || 
-                      canUpdateReactions(request.resource.data)
+                      (isExistingOwner(resource.data.digitalToken) && canUpdatePostContent()) || 
+                      canUpdateReactions()
                     );
       allow delete: if isSignedIn() && isExistingOwner(resource.data.digitalToken);
     }
@@ -81,13 +81,16 @@ service cloud.firestore {
     return isSignedIn() && isOwner(userId) && resource != null;
   }
 
-  function canUpdatePostContent(data) {
+  function canUpdatePostContent() {
     // Only content can be updated by the owner.
-    return data.keys().hasOnly(['content']);
+    return request.resource.data.keys().hasOnly(['content']);
   }
 
-  function canUpdateReactions(data) {
+  function canUpdateReactions() {
     // Any user can update the reactions.
-    return data.keys().hasOnly(['reactions']);
+    let reactionKeys = ['reactions.red', 'reactions.yellow', 'reactions.green'];
+    return request.resource.data.keys().hasAny(reactionKeys) &&
+           request.resource.data.keys().size() <= reactionKeys.length() &&
+           request.resource.data.keys().hasOnly(reactionKeys);
   }
 }
