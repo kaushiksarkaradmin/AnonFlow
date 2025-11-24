@@ -75,12 +75,12 @@ export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: Po
               <FormControl>
                 <Textarea
                   placeholder={placeholder || "What's on your mind? Share it anonymously..."}
-                  className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-2 text-base"
+                  className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-2 text-sm sm:text-base"
                   rows={isReplyForm ? 2 : 4}
                   {...field}
                 />
               </FormControl>
-              <FormMessage className="px-2" />
+              <FormMessage className="px-2 text-xs sm:text-sm" />
             </FormItem>
           )}
         />
@@ -105,7 +105,7 @@ export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: Po
 
   return (
     <Card>
-      <CardContent className="p-4">
+      <CardContent className="p-2 sm:p-4">
         {formContent}
       </CardContent>
     </Card>

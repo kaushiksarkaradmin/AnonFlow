@@ -4,7 +4,7 @@ import { formatDistanceToNow } from 'date-fns';
 import type { Post } from '@/lib/types';
 import { cn, generateAvatarColor } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardFooter, CardHeader } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MessageSquare } from 'lucide-react';
 import { HTMLAttributes, useState } from 'react';
@@ -46,9 +46,9 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
 
   return (
     <Card className={cn("overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300", className)} {...props}>
-      <CardHeader className="flex flex-row items-center gap-4 p-4 bg-card">
-        <Avatar>
-          <AvatarFallback style={{ backgroundColor: avatarColor }} className="text-primary-foreground font-bold">
+      <CardHeader className="flex flex-row items-start sm:items-center gap-4 p-4 bg-card">
+        <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+          <AvatarFallback style={{ backgroundColor: avatarColor }} className="text-primary-foreground font-bold text-xs sm:text-sm">
             {avatarInitials}
           </AvatarFallback>
         </Avatar>
@@ -60,9 +60,9 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
         </div>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <p className="whitespace-pre-wrap text-foreground/90">{post.content}</p>
+        <p className="whitespace-pre-wrap text-sm sm:text-base text-foreground/90">{post.content}</p>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-end items-center gap-4">
+      <CardFooter className="p-4 pt-0 flex justify-end items-center gap-2 sm:gap-4">
         {hasReplies && (
           <Dialog>
             <DialogTrigger asChild>

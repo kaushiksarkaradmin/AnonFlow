@@ -118,17 +118,17 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-background text-foreground">
       <SiteHeader />
-      <main className="container mx-auto max-w-2xl flex-grow px-4 py-8">
+      <main className="container mx-auto max-w-2xl flex-grow px-4 py-4 sm:py-8">
         <div className="w-full">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold tracking-tight text-primary sm:text-5xl font-headline">
               Welcome to AnonFlow
             </h1>
-            <p className="mt-3 text-lg text-muted-foreground">
+            <p className="mt-3 text-base sm:text-lg text-muted-foreground">
               Share your thoughts with the world, anonymously.
             </p>
             {displayName && (
-              <p className="mt-4 text-xl text-foreground">
+              <p className="mt-4 text-lg sm:text-xl text-foreground">
                 Hi! <span className="font-semibold text-primary">{displayName}</span>
               </p>
             )}
@@ -194,7 +194,7 @@ export default function Home() {
           </div>
         </div>
       </main>
-      <footer className="py-4 text-center text-sm text-muted-foreground">
+      <footer className="py-4 text-center text-xs sm:text-sm text-muted-foreground">
         <p>Built with ❤️ for anonymous expression.</p>
       </footer>
     </div>
