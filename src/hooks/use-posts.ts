@@ -5,6 +5,8 @@ import {
   useFirestore,
   useCollection,
   useMemoFirebase,
+  errorEmitter,
+  FirestorePermissionError,
 } from '@/firebase';
 import { collection, doc, serverTimestamp, query, orderBy, arrayUnion, arrayRemove, writeBatch } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
@@ -97,9 +99,16 @@ export function usePosts() {
       }
       
       batch.commit().catch(err => {
-        console.error("Failed to update reaction", err);
         // Revert optimistic update on error by resetting to server state
         setLocalPosts(serverPosts);
+        
+        // Create and emit a detailed error for debugging
+        const contextualError = new FirestorePermissionError({
+          path: postRef.path,
+          operation: 'update',
+          requestResourceData: { reactions: '...' } // Don't send the full reaction data for brevity
+        });
+        errorEmitter.emit('permission-error', contextualError);
       });
 
     }, [firestore, serverPosts, localPosts]
