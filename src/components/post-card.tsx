@@ -6,13 +6,11 @@ import { cn, generateAvatarColor } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
 import { HTMLAttributes, useState } from 'react';
 import { PostForm } from './post-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
-import { usePosts } from '@/hooks/use-posts';
-import { useAnonUser } from '@/hooks/use-anon-user';
 
 interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
   post: Post;
@@ -23,8 +21,6 @@ interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
 
 export function PostCard({ post, displayName, className, onReply, userTokenMap, ...props }: PostCardProps) {
   const [isReplying, setIsReplying] = useState(false);
-  const { digitalToken } = useAnonUser();
-  const { addReaction } = usePosts();
   const avatarColor = generateAvatarColor(post.digitalToken);
   const avatarInitials = displayName.substring(0, 2).toUpperCase();
   
@@ -46,17 +42,7 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
     setIsReplying(false);
   };
 
-  const handleReaction = (reaction: 'likes' | 'dislikes') => {
-    if (digitalToken) {
-      addReaction(post.id, digitalToken, reaction);
-    }
-  };
-
   const hasReplies = post.replies && post.replies.length > 0;
-  const likesCount = post.reactions?.likes?.length || 0;
-  const dislikesCount = post.reactions?.dislikes?.length || 0;
-  const userHasLiked = digitalToken ? post.reactions?.likes?.includes(digitalToken) : false;
-  const userHasDisliked = digitalToken ? post.reactions?.dislikes?.includes(digitalToken) : false;
 
   return (
     <Card className={cn("overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300", className)} {...props}>
@@ -111,20 +97,6 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
                 Reply
             </Button>
         )}
-        <div className="flex items-center gap-1">
-          <Button variant={userHasLiked ? "secondary" : "ghost"} size="sm" onClick={() => handleReaction('likes')}>
-            <ThumbsUp className={cn("mr-2 h-4 w-4", userHasLiked && "text-primary")} />
-            Like
-          </Button>
-          <span className="text-xs font-semibold text-muted-foreground w-4 text-center">{likesCount}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button variant={userHasDisliked ? "secondary" : "ghost"} size="sm" onClick={() => handleReaction('dislikes')}>
-            <ThumbsDown className={cn("mr-2 h-4 w-4", userHasDisliked && "text-destructive")} />
-            Dislike
-          </Button>
-          <span className="text-xs font-semibold text-muted-foreground w-4 text-center">{dislikesCount}</span>
-        </div>
       </CardFooter>
       
       {isReplying && (

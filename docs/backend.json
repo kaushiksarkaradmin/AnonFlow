@@ -26,24 +26,6 @@
         "parentId": {
           "type": "string",
           "description": "If this post is a reply, this is the ID of the parent post."
-        },
-        "reactions": {
-          "type": "object",
-          "description": "A map storing user reactions. Keys are reaction types ('likes', 'dislikes') and values are arrays of user digitalTokens.",
-          "properties": {
-            "likes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            },
-            "dislikes": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              }
-            }
-          }
         }
       },
       "required": [

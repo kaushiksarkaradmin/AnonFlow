@@ -9,8 +9,7 @@
  * Key Security Decisions:
  * - Posts are publicly readable.
  * - Posts can only be created by authenticated users (anonymous auth enabled).
- * - Only the user who created a post can delete it.
- * - Users can update any post to add a reaction, but cannot change other fields.
+ * - Only the user who created a post can delete it or update its content.
  * - User listing is allowed for the activity log feature.
  *
  * Denormalization for Authorization:
@@ -49,21 +48,18 @@ service cloud.firestore {
      * @deny (create) If the digitalToken doesn't match the auth.uid, creation is denied.
      * @allow (get) All users can get any post.
      * @allow (list) All users can list all posts.
-     * @allow (update) A signed-in user can update a post. If they are the owner, they can update the content. Any user can update the reactions.
+     * @allow (update) A signed-in user can update a post's content if they are the owner.
      * @deny (update) If the user is not the original creator and tries to update content, update is denied.
      * @allow (delete) Only the user who created the post can delete it.
      * @deny (delete) If the user is not the original creator, deletion is denied.
-     * @principle Allows public reads, enforces document ownership for content writes, and allows reaction updates for all users.
+     * @principle Allows public reads, enforces document ownership for content writes.
      */
     match /posts/{postId} {
       allow get: if true;
       allow list: if true;
 
       allow create: if isSignedIn() && request.resource.data.digitalToken == request.auth.uid;
-      allow update: if isSignedIn() && (
-                      (isExistingOwner(resource.data.digitalToken) && canUpdatePostContent()) || 
-                      canUpdateReactions()
-                    );
+      allow update: if isSignedIn() && isExistingOwner(resource.data.digitalToken) && canUpdatePostContent();
       allow delete: if isSignedIn() && isExistingOwner(resource.data.digitalToken);
     }
   }
@@ -84,13 +80,5 @@ service cloud.firestore {
   function canUpdatePostContent() {
     // Only content can be updated by the owner.
     return request.resource.data.keys().hasOnly(['content']);
-  }
-
-  function canUpdateReactions() {
-    // Check that the only fields being changed are within the reactions map.
-    // This allows for atomic updates using arrayUnion/arrayRemove.
-    let changedKeys = request.resource.data.diff(resource.data).affectedKeys;
-    let reactionKeys = ['reactions.likes', 'reactions.dislikes'];
-    return changedKeys.hasOnly(reactionKeys);
   }
 }
