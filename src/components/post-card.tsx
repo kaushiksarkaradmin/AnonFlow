@@ -6,13 +6,11 @@ import { cn, generateAvatarColor } from '@/lib/utils';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MessageSquare, Smile } from 'lucide-react';
+import { MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { HTMLAttributes, useState } from 'react';
 import { PostForm } from './post-form';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Reactions } from './reactions';
 import { usePosts } from '@/hooks/use-posts';
 import { useAnonUser } from '@/hooks/use-anon-user';
 
@@ -48,13 +46,17 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
     setIsReplying(false);
   };
 
-  const handleReaction = (reaction: 'red' | 'yellow' | 'green') => {
+  const handleReaction = (reaction: 'likes' | 'dislikes') => {
     if (digitalToken) {
       addReaction(post.id, digitalToken, reaction);
     }
   };
 
   const hasReplies = post.replies && post.replies.length > 0;
+  const likesCount = post.reactions?.likes?.length || 0;
+  const dislikesCount = post.reactions?.dislikes?.length || 0;
+  const userHasLiked = digitalToken ? post.reactions?.likes?.includes(digitalToken) : false;
+  const userHasDisliked = digitalToken ? post.reactions?.dislikes?.includes(digitalToken) : false;
 
   return (
     <Card className={cn("overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300", className)} {...props}>
@@ -74,7 +76,7 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
       <CardContent className="p-4 pt-0">
         <p className="whitespace-pre-wrap text-foreground/90">{post.content}</p>
       </CardContent>
-      <CardFooter className="p-4 pt-0 flex justify-end gap-2">
+      <CardFooter className="p-4 pt-0 flex justify-end items-center gap-4">
         {hasReplies && (
           <Dialog>
             <DialogTrigger asChild>
@@ -109,21 +111,20 @@ export function PostCard({ post, displayName, className, onReply, userTokenMap, 
                 Reply
             </Button>
         )}
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="sm">
-              <Smile className="mr-2 h-4 w-4" />
-              React
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-2">
-            <Reactions
-              reactions={post.reactions}
-              onReact={handleReaction}
-              userDigitalToken={digitalToken}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="flex items-center gap-1">
+          <Button variant={userHasLiked ? "secondary" : "ghost"} size="sm" onClick={() => handleReaction('likes')}>
+            <ThumbsUp className={cn("mr-2 h-4 w-4", userHasLiked && "text-primary")} />
+            Like
+          </Button>
+          <span className="text-xs font-semibold text-muted-foreground w-4 text-center">{likesCount}</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Button variant={userHasDisliked ? "secondary" : "ghost"} size="sm" onClick={() => handleReaction('dislikes')}>
+            <ThumbsDown className={cn("mr-2 h-4 w-4", userHasDisliked && "text-destructive")} />
+            Dislike
+          </Button>
+          <span className="text-xs font-semibold text-muted-foreground w-4 text-center">{dislikesCount}</span>
+        </div>
       </CardFooter>
       
       {isReplying && (

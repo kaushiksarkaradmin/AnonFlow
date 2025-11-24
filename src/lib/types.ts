@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase/firestore";
 
-export type ReactionType = 'red' | 'yellow' | 'green';
+export type ReactionType = 'likes' | 'dislikes';
 
 export type Reactions = {
   [key in ReactionType]?: string[];

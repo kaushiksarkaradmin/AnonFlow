@@ -43,7 +43,7 @@ export function usePosts() {
       const postWithTimestamp = {
         ...newPost,
         createdAt: serverTimestamp(),
-        reactions: { red: [], yellow: [], green: [] },
+        reactions: { likes: [], dislikes: [] },
       };
       
       addDocumentNonBlocking(postsCollection, postWithTimestamp);
@@ -53,64 +53,62 @@ export function usePosts() {
   
   const addReaction = useCallback(
     (postId: string, digitalToken: string, reaction: ReactionType) => {
-      if (!firestore) return;
+        if (!firestore) return;
 
-      const currentPost = (localPosts || serverPosts)?.find(p => p.id === postId);
-      if (!currentPost) return;
+        const currentPost = (localPosts || serverPosts)?.find(p => p.id === postId);
+        if (!currentPost) return;
 
-      const userHasReactedWithColor = currentPost.reactions?.[reaction]?.includes(digitalToken);
-
-      // Optimistic UI update
-      setLocalPosts(prevPosts => {
-        if (!prevPosts) return null;
-        return prevPosts.map(p => {
-          if (p.id === postId) {
-            const newReactions = { ...(p.reactions || { red: [], yellow: [], green: [] }) };
-            
-            // Remove user from all reaction arrays first
-            (Object.keys(newReactions) as ReactionType[]).forEach(key => {
-              newReactions[key] = (newReactions[key] || []).filter(token => token !== digitalToken);
-            });
-
-            // If the user wasn't already reacting with this color, add them.
-            if (!userHasReactedWithColor) {
-               newReactions[reaction] = [...(newReactions[reaction] || []), digitalToken];
-            }
-            
-            return { ...p, reactions: newReactions };
-          }
-          return p;
-        });
-      });
-
-      // Update firestore in the background
-      const postRef = doc(firestore, 'posts', postId);
-      const batch = writeBatch(firestore);
-      const allReactionTypes: ReactionType[] = ['red', 'yellow', 'green'];
-
-      // Always remove the user from all reactions first to handle switching.
-      allReactionTypes.forEach(type => {
-        batch.update(postRef, { [`reactions.${type}`]: arrayRemove(digitalToken) });
-      });
-
-      // If it wasn't a toggle-off, add the new reaction.
-      if (!userHasReactedWithColor) {
-         batch.update(postRef, { [`reactions.${reaction}`]: arrayUnion(digitalToken) });
-      }
-      
-      batch.commit().catch(err => {
-        // Revert optimistic update on error by resetting to server state
-        setLocalPosts(serverPosts);
+        const userHasReactedWith = (r: ReactionType) => currentPost.reactions?.[r]?.includes(digitalToken);
+        const isTogglingOff = userHasReactedWith(reaction);
+        const oppositeReaction: ReactionType = reaction === 'likes' ? 'dislikes' : 'likes';
         
-        // Create and emit a detailed error for debugging
-        const contextualError = new FirestorePermissionError({
-          path: postRef.path,
-          operation: 'update',
-          requestResourceData: { reactions: '...' } // Don't send the full reaction data for brevity
-        });
-        errorEmitter.emit('permission-error', contextualError);
-      });
+        // Optimistic UI update
+        setLocalPosts(prevPosts => {
+            if (!prevPosts) return null;
+            return prevPosts.map(p => {
+                if (p.id === postId) {
+                    const newReactions = { ...(p.reactions || { likes: [], dislikes: [] }) };
+                    
+                    // If switching reaction, remove from opposite
+                    if (!isTogglingOff && userHasReactedWith(oppositeReaction)) {
+                        newReactions[oppositeReaction] = (newReactions[oppositeReaction] || []).filter(token => token !== digitalToken);
+                    }
 
+                    // Toggle the selected reaction
+                    if (isTogglingOff) {
+                         newReactions[reaction] = (newReactions[reaction] || []).filter(token => token !== digitalToken);
+                    } else {
+                         newReactions[reaction] = [...(newReactions[reaction] || []), digitalToken];
+                    }
+                    
+                    return { ...p, reactions: newReactions };
+                }
+                return p;
+            });
+        });
+
+        // Update firestore in the background
+        const postRef = doc(firestore, 'posts', postId);
+        const batch = writeBatch(firestore);
+        
+        batch.update(postRef, { [`reactions.${reaction}`]: isTogglingOff ? arrayRemove(digitalToken) : arrayUnion(digitalToken) });
+        
+        // If user is not toggling off and has reacted with the opposite, remove opposite reaction
+        if (!isTogglingOff && userHasReactedWith(oppositeReaction)) {
+            batch.update(postRef, { [`reactions.${oppositeReaction}`]: arrayRemove(digitalToken) });
+        }
+        
+        batch.commit().catch(err => {
+            // Revert optimistic update on error by resetting to server state
+            setLocalPosts(serverPosts);
+            
+            const contextualError = new FirestorePermissionError({
+                path: postRef.path,
+                operation: 'update',
+                requestResourceData: { reactions: '...' }
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
     }, [firestore, serverPosts, localPosts]
   );
   

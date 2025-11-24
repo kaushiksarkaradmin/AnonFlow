@@ -90,7 +90,7 @@ service cloud.firestore {
     // Check that the only fields being changed are within the reactions map.
     // This allows for atomic updates using arrayUnion/arrayRemove.
     let changedKeys = request.resource.data.diff(resource.data).affectedKeys;
-    let reactionKeys = ['reactions.red', 'reactions.yellow', 'reactions.green'];
+    let reactionKeys = ['reactions.likes', 'reactions.dislikes'];
     return changedKeys.hasOnly(reactionKeys);
   }
 }
