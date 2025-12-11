@@ -15,6 +15,9 @@ export default function Home() {
           <p className="mt-3 text-base sm:text-lg text-muted-foreground">
             The functions of this application have been temporarily paused.
           </p>
+          <p className="mt-3 text-base sm:text-lg text-muted-foreground">
+            We will come back very soon.
+          </p>
         </div>
       </main>
       <footer className="py-4 text-center text-xs sm:text-sm text-muted-foreground">
