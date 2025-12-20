@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useAuth } from '@/firebase';
 import { PostCard } from '@/components/post-card';
 import { PostForm } from '@/components/post-form';
@@ -13,20 +13,28 @@ import { usePosts } from '@/hooks/use-posts';
 import type { UserProfile } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useAuthUser } from '@/hooks/use-auth-user';
-import { useNotificationSound } from '@/hooks/use-notification-sound';
+import { useNotifications } from '@/hooks/use-notification-sound';
 
 export default function Home() {
   const auth = useAuth();
   const { user, isUserLoading } = useAuthUser();
   
-  // Conditionally fetch posts only when the user is loaded
   const { posts, isLoading: isPostsLoading, addPost } = usePosts(!isUserLoading && !!user);
-  
-  // Conditionally fetch users only when the user is loaded
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
 
-  // Initialize the notification sound hook
-  useNotificationSound(posts, user?.uid || null);
+  const userProfileMap = useMemo(() => {
+    if (!userProfiles) return {};
+    return userProfiles.reduce((acc, profile) => {
+      acc[profile.id] = profile;
+      return acc;
+    }, {} as Record<string, UserProfile>);
+  }, [userProfiles]);
+
+  const getUserProfile = useCallback((userId: string) => {
+    return userProfileMap[userId];
+  }, [userProfileMap]);
+
+  useNotifications(posts, user?.uid || null, getUserProfile);
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
@@ -45,22 +53,12 @@ export default function Home() {
 
   const sortedPosts = useMemo(() => {
     if (!posts) return [];
-    // The query now handles sorting, but we can keep this for client-side resilience.
     return [...posts].sort((a, b) => {
       const aDate = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate() : new Date(a.createdAt as any);
       const bDate = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt as any);
       return aDate.getTime() - bDate.getTime();
     });
   }, [posts]);
-
-  const userProfileMap = useMemo(() => {
-    if (!userProfiles) return {};
-    return userProfiles.reduce((acc, profile) => {
-      acc[profile.id] = profile;
-      return acc;
-    }, {} as Record<string, UserProfile>);
-  }, [userProfiles]);
-
 
   if (isUserLoading || (user && isUsersLoading)) {
     return (
