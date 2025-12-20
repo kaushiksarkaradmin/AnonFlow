@@ -62,8 +62,9 @@ export default function Home() {
   }, [posts]);
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
     }
   }, [sortedPosts, isPostsLoading]);
 
@@ -92,7 +93,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <SiteHeader />
-      <ScrollArea className="flex-grow" viewportRef={scrollAreaRef}>
+      <ScrollArea className="flex-grow" ref={scrollAreaRef}>
         <main className="container mx-auto max-w-2xl flex-grow px-4 py-8">
           <div className="space-y-4">
             {isPostsLoading && (
