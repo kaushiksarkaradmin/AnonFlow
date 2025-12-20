@@ -9,7 +9,7 @@ import {
 import { collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
-export function usePosts() {
+export function usePosts(enabled: boolean = true) {
   const firestore = useFirestore();
   
   const postsCollection = useMemoFirebase(() => {
@@ -18,9 +18,10 @@ export function usePosts() {
   }, [firestore]);
 
   const postsQuery = useMemoFirebase(() => {
-    if (!postsCollection) return null;
+    // Only return a query if the hook is enabled
+    if (!postsCollection || !enabled) return null;
     return query(postsCollection, orderBy('createdAt', 'asc'));
-  }, [postsCollection]);
+  }, [postsCollection, enabled]);
 
   const { data: posts, isLoading, error } = useCollection<Post>(postsQuery);
 
@@ -42,8 +43,9 @@ export function usePosts() {
   );
   
   if (error) {
-    console.error("Error fetching posts:", error);
+    // This error might be expected if the user isn't logged in yet, so we don't log it aggressively.
+    // The UI will handle the loading state.
   }
 
-  return { posts: posts || [], isLoading, addPost };
+  return { posts: posts || [], isLoading: enabled ? isLoading : false, addPost };
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth } from '@/firebase';
 import { PostCard } from '@/components/post-card';
 import { PostForm } from '@/components/post-form';
 import { SiteHeader } from '@/components/site-header';
@@ -12,11 +12,15 @@ import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { usePosts } from '@/hooks/use-posts';
 import type { UserProfile } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
+import { useAuthUser } from '@/hooks/use-auth-user';
 
 export default function Home() {
   const auth = useAuth();
-  const { user, isUserLoading } = useUser();
-  const { posts, isLoading: isPostsLoading, addPost } = usePosts();
+  const { user, isUserLoading } = useAuthUser();
+  
+  // Conditionally fetch posts only when the user is loaded
+  const { posts, isLoading: isPostsLoading, addPost } = usePosts(!isUserLoading && !!user);
+  
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers();
 
   const handleLogin = async () => {
@@ -36,6 +40,7 @@ export default function Home() {
 
   const sortedPosts = useMemo(() => {
     if (!posts) return [];
+    // The query now handles sorting, but we can keep this for client-side resilience.
     return [...posts].sort((a, b) => {
       const aDate = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate() : new Date(a.createdAt as any);
       const bDate = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt as any);
@@ -52,7 +57,7 @@ export default function Home() {
   }, [userProfiles]);
 
 
-  if (isUserLoading || isUsersLoading) {
+  if (isUserLoading || (user && isUsersLoading)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Skeleton className="h-20 w-20 rounded-full" />
