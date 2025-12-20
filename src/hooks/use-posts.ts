@@ -1,14 +1,13 @@
-
 'use client';
-import { useCallback, useState, useEffect } from 'react';
+import { useCallback } from 'react';
 import type { Post } from '@/lib/types';
 import {
   useFirestore,
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, serverTimestamp, query, orderBy, where, getDocs, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, batchDeleteDocumentsNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function usePosts() {
   const firestore = useFirestore();
@@ -20,7 +19,7 @@ export function usePosts() {
 
   const postsQuery = useMemoFirebase(() => {
     if (!postsCollection) return null;
-    return query(postsCollection, orderBy('createdAt', 'desc'));
+    return query(postsCollection, orderBy('createdAt', 'asc'));
   }, [postsCollection]);
 
   const { data: posts, isLoading, error } = useCollection<Post>(postsQuery);
@@ -42,28 +41,9 @@ export function usePosts() {
     [postsCollection]
   );
   
-  const deleteUserPosts = useCallback(async (digitalToken: string) => {
-    if (!firestore || !postsCollection) {
-      console.error("Firestore or posts collection not available.");
-      return;
-    }
-    const userPostsQuery = query(postsCollection, where('digitalToken', '==', digitalToken));
-    
-    try {
-      const querySnapshot = await getDocs(userPostsQuery);
-      const docRefsToDelete = querySnapshot.docs.map(d => doc(firestore, 'posts', d.id));
-      
-      if (docRefsToDelete.length > 0) {
-        batchDeleteDocumentsNonBlocking(firestore, docRefsToDelete);
-      }
-    } catch(e) {
-        console.error("Error querying user posts for deletion: ", e);
-    }
-  }, [firestore, postsCollection]);
-
   if (error) {
     console.error("Error fetching posts:", error);
   }
 
-  return { posts: posts || [], isLoading, addPost, deleteUserPosts };
+  return { posts: posts || [], isLoading, addPost };
 }

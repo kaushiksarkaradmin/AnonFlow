@@ -1,76 +1,58 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { useAuth, useUser } from '@/firebase';
-import { initiateAnonymousSignIn } from '@/firebase/non-blocking-login';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useEffect } from 'react';
+import { useAuth, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { generateRandomName } from '@/lib/random-names';
-import type { UserToken } from '@/lib/types';
+import type { UserProfile } from '@/lib/types';
 
-const USER_DISPLAY_NAME_KEY = 'anon-user-display-name';
-
-export function useAnonUser() {
+export function useAuthUser() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
-  const [displayName, setDisplayName] = useState<string | null>(null);
-
-  useEffect(() => {
-    // This effect runs only on the client after hydration
-    const storedName = localStorage.getItem(USER_DISPLAY_NAME_KEY);
-    if (storedName) {
-      setDisplayName(storedName);
-    }
-  }, []);
-
-  const userTokenRef = useMemoFirebase(
-    () => (firestore && user ? doc(firestore, 'userTokens', user.uid) : null),
+  
+  const userProfileRef = useMemoFirebase(
+    () => (firestore && user ? doc(firestore, 'users', user.uid) : null),
     [firestore, user]
   );
   
-  const { data: userTokenDoc } = useDoc<UserToken>(userTokenRef);
+  const { data: userProfileDoc } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      initiateAnonymousSignIn(auth);
-    }
-  }, [auth, user, isUserLoading]);
-
-  useEffect(() => {
-    if (user && firestore && userTokenRef) {
-      if (userTokenDoc === undefined) {
-        // Still loading from Firestore, do nothing and rely on local storage version
+    if (user && firestore && userProfileRef) {
+      // When user is authenticated, ensure their profile exists in Firestore.
+      if (userProfileDoc === undefined) {
+        // Still loading from Firestore, do nothing.
         return;
       }
 
-      if (userTokenDoc === null) {
+      if (userProfileDoc === null) {
         // Document doesn't exist in Firestore, create it.
-        const newName = displayName || generateRandomName();
-        const tokenData = {
-          digitalToken: user.uid,
-          displayName: newName,
+        const profileData: Omit<UserProfile, 'id'> = {
+          displayName: user.displayName || 'Anonymous User',
+          email: user.email || '',
+          photoURL: user.photoURL || '',
           createdAt: serverTimestamp(),
         };
-        setDocumentNonBlocking(userTokenRef, tokenData, { merge: false });
-        if (displayName !== newName) {
-            setDisplayName(newName);
-            if (typeof window !== 'undefined') {
-                localStorage.setItem(USER_DISPLAY_NAME_KEY, newName);
-            }
-        }
+        setDocumentNonBlocking(userProfileRef, profileData, { merge: false });
       } else {
-        // Document exists, sync state with Firestore and local storage.
-        if (displayName !== userTokenDoc.displayName) {
-          setDisplayName(userTokenDoc.displayName);
-          if (typeof window !== 'undefined') {
-              localStorage.setItem(USER_DISPLAY_NAME_KEY, userTokenDoc.displayName);
-          }
+        // Document exists, check for updates.
+        const hasChanges = 
+            userProfileDoc.displayName !== user.displayName ||
+            userProfileDoc.email !== user.email ||
+            userProfileDoc.photoURL !== user.photoURL;
+        
+        if (hasChanges) {
+             const updatedProfileData = {
+                displayName: user.displayName,
+                email: user.email,
+                photoURL: user.photoURL,
+             };
+             setDocumentNonBlocking(userProfileRef, updatedProfileData, { merge: true });
         }
       }
     }
-  }, [user, firestore, userTokenRef, userTokenDoc, displayName]);
+  }, [user, firestore, userProfileRef, userProfileDoc]);
 
-  return { digitalToken: user?.uid || null, displayName };
+  return { user, isUserLoading };
 }

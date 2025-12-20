@@ -5,7 +5,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
   title: 'Parivarik Chat',
-  description: 'Post anonymously to a shared timeline.',
+  description: 'A private chat for family and friends.',
 };
 
 export default function RootLayout({

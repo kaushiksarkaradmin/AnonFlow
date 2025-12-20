@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Post",
       "type": "object",
-      "description": "Represents a post in the anonymous timeline. Can be a top-level post or a reply to another post.",
+      "description": "Represents a post in the private chat.",
       "properties": {
         "id": {
           "type": "string",
@@ -14,74 +14,89 @@
           "type": "string",
           "description": "The content of the post."
         },
-        "digitalToken": {
+        "userId": {
           "type": "string",
-          "description": "The digital token of the user who created the post. (Relationship: User 1:N Post)"
+          "description": "The UID of the user who created the post."
         },
         "createdAt": {
           "type": "string",
           "description": "Timestamp indicating when the post was created.",
           "format": "date-time"
-        },
-        "parentId": {
-          "type": "string",
-          "description": "If this post is a reply, this is the ID of the parent post."
         }
       },
       "required": [
         "id",
         "content",
-        "digitalToken",
+        "userId",
         "createdAt"
       ]
     },
-    "UserToken": {
+    "UserProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "UserToken",
+      "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's unique digital token.",
+      "description": "Represents a user's profile information from their Google account.",
       "properties": {
-        "digitalToken": {
-          "type": "string",
-          "description": "Unique digital token generated for the user."
-        },
         "displayName": {
           "type": "string",
-          "description": "A randomly generated display name for the user."
+          "description": "User's display name."
+        },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email address."
+        },
+        "photoURL": {
+          "type": "string",
+          "format": "uri",
+          "description": "URL of the user's profile picture."
         },
         "createdAt": {
           "type": "string",
-          "description": "Timestamp indicating when the token was created.",
+          "description": "Timestamp indicating when the profile was created.",
           "format": "date-time"
         }
       },
       "required": [
-        "digitalToken",
         "displayName",
+        "email",
         "createdAt"
       ]
+    },
+    "AllowedUser": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "AllowedUser",
+        "type": "object",
+        "description": "Represents an email address that is allowed to access the application.",
+        "properties": {
+            "email": {
+                "type": "string",
+                "format": "email",
+                "description": "The email address of the allowed user."
+            }
+        },
+        "required": ["email"]
     }
   },
   "auth": {
     "providers": [
-      "password",
-      "anonymous"
+      "google.com"
     ]
   },
   "firestore": {
     "structure": [
       {
-        "path": "/userTokens/{digitalToken}",
+        "path": "/users/{userId}",
         "definition": {
-          "entityName": "UserToken",
+          "entityName": "UserProfile",
           "schema": {
-            "$ref": "#/backend/entities/UserToken"
+            "$ref": "#/backend/entities/UserProfile"
           },
-          "description": "Stores user digital tokens. The document ID is the digitalToken. Includes ipAddress and createdAt timestamps.",
+          "description": "Stores user profile information. The document ID is the user's UID.",
           "params": [
             {
-              "name": "digitalToken",
-              "description": "The unique digital token identifying the user."
+              "name": "userId",
+              "description": "The unique identifier for the user (UID)."
             }
           ]
         }
@@ -93,7 +108,7 @@
           "schema": {
             "$ref": "#/backend/entities/Post"
           },
-          "description": "Stores all posts. Includes the digitalToken of the user who created the post for authorization independence.",
+          "description": "Stores all chat messages.",
           "params": [
             {
               "name": "postId",
@@ -101,8 +116,23 @@
             }
           ]
         }
+      },
+      {
+          "path": "/allowedUsers/{email}",
+          "definition": {
+              "entityName": "AllowedUser",
+              "schema": {
+                  "$ref": "#/backend/entities/AllowedUser"
+              },
+              "description": "A list of emails of users allowed to use the app. The document ID is the user's email.",
+              "params": [
+                  {
+                      "name": "email",
+                      "description": "The email address of an allowed user."
+                  }
+              ]
+          }
       }
-    ],
-    "reasoning": "Given the requirements for anonymous posting to a public timeline, IP address tracking for digital token creation, and cache synchronization, the following Firestore structure is recommended:\n\n1.  `/userTokens/{digitalToken}`: This collection stores user digital tokens. The document ID is the `digitalToken` itself, ensuring uniqueness. This enables quick lookups by `digitalToken`.\n2.  `/posts/{postId}`: This collection stores all posts. All posts are stored in a single collection to enable a global timeline view.  Each post contains a `digitalToken` field, identifying the user who created the post. There are no subcollections. This simplifies querying for all posts or posts by a specific user.\n\n**Authorization Independence (Denormalization):**\n*   The `posts` collection includes the `digitalToken` of the user who created the post. This eliminates the need to perform `get()` operations to verify the user's identity when listing or moderating posts. All necessary information for security rules is contained within the post document itself.\n\n**QAPs (Rules are not Filters):**\n*   **Secure List Operation:** The `/posts` collection can be listed securely because all posts are stored in a single collection with a consistent security posture. The `digitalToken` within each post enables rules to control access based on user identity without needing to filter based on the document content.\n*   **Content Moderation:** Because posts are stored in a single collection, moderation tools can easily query and manage all posts. Security rules can grant administrative access to moderation tools without compromising user data.\n\nThis structure prioritizes simplicity and security by avoiding hierarchical dependencies and enabling clear, enforceable security rules."
+    ]
   }
 }

@@ -1,8 +1,8 @@
-
 import { Icons } from "@/components/icons";
 import Link from 'next/link';
 import { Button } from "./ui/button";
-import { Trash2 } from "lucide-react";
+import { LogOut } from "lucide-react";
+import { useAuth, useUser } from "@/firebase";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -14,13 +14,24 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 
 
-type SiteHeaderProps = {
-  onClearHistory: () => void;
-};
+export function SiteHeader() {
+  const auth = useAuth();
+  const { user } = useUser();
 
-export function SiteHeader({ onClearHistory }: SiteHeaderProps) {
+  const handleLogout = async () => {
+    await auth.signOut();
+  };
+
+  const FallbackAvatar = () => (
+    <AvatarFallback>
+        {user?.displayName?.charAt(0).toUpperCase()}
+    </AvatarFallback>
+  );
+
+
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur-sm">
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6">
@@ -28,26 +39,35 @@ export function SiteHeader({ onClearHistory }: SiteHeaderProps) {
           <Icons.logo className="h-6 w-6 text-primary" />
           <span className="font-bold text-lg text-primary font-headline">Parivarik Chat</span>
         </Link>
-        <AlertDialog>
-          <AlertDialogTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <Trash2 className="h-4 w-4" />
-              <span className="sr-only">Clear My Posts</span>
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete all of your posts from the timeline.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={onClearHistory}>Continue</AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+
+        {user && (
+          <div className="flex items-center gap-4">
+              <Avatar className="h-8 w-8">
+                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || ""} />
+                  <FallbackAvatar />
+              </Avatar>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <LogOut className="h-4 w-4" />
+                    <span className="sr-only">Logout</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure you want to log out?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      You will be returned to the login screen.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleLogout}>Log Out</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+          </div>
+        )}
       </div>
     </header>
   );

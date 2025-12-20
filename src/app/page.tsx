@@ -1,89 +1,104 @@
-
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useAnonUser } from '@/hooks/use-anon-user';
-import { usePosts } from '@/hooks/use-posts';
+import { useMemo } from 'react';
+import { useAuth, useUser } from '@/firebase';
 import { PostCard } from '@/components/post-card';
 import { PostForm } from '@/components/post-form';
 import { SiteHeader } from '@/components/site-header';
 import { Skeleton } from '@/components/ui/skeleton';
-import { collection, getDocs, query } from 'firebase/firestore';
-import { useFirestore } from '@/firebase';
-import type { UserToken } from '@/lib/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Button } from '@/components/ui/button';
+import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { usePosts } from '@/hooks/use-posts';
+import type { UserProfile } from '@/lib/types';
+import { useUsers } from '@/hooks/use-users';
 
 export default function Home() {
-  const { digitalToken } = useAnonUser();
-  const { posts, isLoading, addPost, deleteUserPosts } = usePosts();
-  const firestore = useFirestore();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const { posts, isLoading: isPostsLoading, addPost } = usePosts();
+  const { users: userProfiles, isLoading: isUsersLoading } = useUsers();
 
-  const [userTokenMap, setUserTokenMap] = useState<Record<string, string>>({});
-  const [isMapLoading, setIsMapLoading] = useState(true);
-
-  useEffect(() => {
-    async function fetchUserTokens() {
-      if (!firestore) return;
-      setIsMapLoading(true);
-      try {
-        const q = query(collection(firestore, 'userTokens'));
-        const querySnapshot = await getDocs(q);
-        const map: Record<string, string> = {};
-        querySnapshot.forEach(doc => {
-          const userToken = doc.data() as UserToken;
-          map[doc.id] = userToken.displayName;
-        });
-        setUserTokenMap(map);
-      } catch (error) {
-        console.error("Error fetching user tokens:", error);
-      } finally {
-        setIsMapLoading(false);
-      }
-    }
-    fetchUserTokens();
-  }, [firestore]);
-
-  const handlePostSubmit = (content: string) => {
-    if (digitalToken) {
-      addPost({ content, digitalToken, parentId: undefined });
+  const handleLogin = async () => {
+    const provider = new GoogleAuthProvider();
+    try {
+      await signInWithPopup(auth, provider);
+    } catch (error) {
+      console.error("Error during Google sign-in:", error);
     }
   };
 
-  const handleClearHistory = () => {
-    if (digitalToken) {
-      deleteUserPosts(digitalToken);
+  const handlePostSubmit = (content: string) => {
+    if (user) {
+      addPost({ content, userId: user.uid });
     }
   };
 
   const sortedPosts = useMemo(() => {
+    if (!posts) return [];
     return [...posts].sort((a, b) => {
       const aDate = (a.createdAt as any)?.toDate ? (a.createdAt as any).toDate() : new Date(a.createdAt as any);
       const bDate = (b.createdAt as any)?.toDate ? (b.createdAt as any).toDate() : new Date(b.createdAt as any);
-      return aDate - bDate;
+      return aDate.getTime() - bDate.getTime();
     });
   }, [posts]);
-  
+
+  const userProfileMap = useMemo(() => {
+    if (!userProfiles) return {};
+    return userProfiles.reduce((acc, profile) => {
+      acc[profile.id] = profile;
+      return acc;
+    }, {} as Record<string, UserProfile>);
+  }, [userProfiles]);
+
+
+  if (isUserLoading || isUsersLoading) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Skeleton className="h-20 w-20 rounded-full" />
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="flex h-screen w-full flex-col items-center justify-center bg-background">
+        <div className='flex items-center space-x-2 mb-8'>
+            <h1 className="text-3xl font-bold text-primary">Parivarik Chat</h1>
+        </div>
+        <p className="text-muted-foreground mb-8">Please sign in to continue.</p>
+        <Button onClick={handleLogin} size="lg">
+          Login with Google
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
-      <SiteHeader onClearHistory={handleClearHistory} />
+      <SiteHeader />
       <ScrollArea className="flex-grow">
         <main className="container mx-auto max-w-2xl flex-grow px-4 py-8">
           <div className="space-y-4">
-            {(isLoading || isMapLoading) && (
+            {isPostsLoading && (
               <>
                 <Skeleton className="h-24 w-full" />
                 <Skeleton className="h-24 w-full" />
                 <Skeleton className="h-24 w-full" />
               </>
             )}
-            {!isLoading && !isMapLoading && sortedPosts.map(post => (
-              <PostCard
-                key={post.id}
-                post={post}
-                displayName={userTokenMap[post.digitalToken] || 'Anonymous'}
-                currentDigitalToken={digitalToken}
-              />
-            ))}
+            {!isPostsLoading && sortedPosts.map(post => {
+              const profile = userProfileMap[post.userId];
+              return (
+                <PostCard
+                  key={post.id}
+                  post={post}
+                  displayName={profile?.displayName || 'Anonymous'}
+                  photoURL={profile?.photoURL}
+                  currentUserId={user.uid}
+                />
+              )
+            })}
           </div>
         </main>
       </ScrollArea>
