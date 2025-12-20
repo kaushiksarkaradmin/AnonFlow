@@ -7,30 +7,25 @@ service cloud.firestore {
     function isSignedIn() {
       return request.auth != null;
     }
-    
-    // Helper function to check if the user's email is in the allowedUsers collection
-    function isAllowedUser() {
-      return exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
-    }
 
     // Users can read their own profile.
     // Whitelisted users can read any user's profile.
     match /users/{userId} {
-      allow get: if isSignedIn() && (request.auth.uid == userId || isAllowedUser());
+      allow get: if isSignedIn() && (request.auth.uid == userId || exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)));
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
     
     // Whitelisted users can list all users to populate the UI.
     match /users/{userId} {
-      allow list: if isSignedIn() && isAllowedUser();
+      allow list: if isSignedIn() && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
     }
 
     // Only whitelisted users can read or write posts
     match /posts/{postId} {
-      allow read, create: if isSignedIn() && isAllowedUser();
+      allow read, create: if isSignedIn() && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
       
       // Users can only update or delete their own posts
-      allow update, delete: if isSignedIn() && isAllowedUser() && resource.data.userId == request.auth.uid;
+      allow update, delete: if isSignedIn() && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email)) && resource.data.userId == request.auth.uid;
     }
     
     // Management of the allowed users list.
