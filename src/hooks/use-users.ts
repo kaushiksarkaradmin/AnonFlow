@@ -7,13 +7,14 @@ import {
 } from '@/firebase';
 import { collection } from 'firebase/firestore';
 
-export function useUsers() {
+export function useUsers(enabled: boolean = true) {
   const firestore = useFirestore();
   
   const usersCollection = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // Only return a query if the hook is enabled
+    if (!firestore || !enabled) return null;
     return collection(firestore, 'users');
-  }, [firestore]);
+  }, [firestore, enabled]);
 
 
   const { data: users, isLoading, error } = useCollection<UserProfile>(usersCollection);
@@ -24,5 +25,5 @@ export function useUsers() {
     console.log("Could not fetch users, possibly due to permissions:", error.message);
   }
 
-  return { users: users || [], isLoading };
+  return { users: users || [], isLoading: enabled ? isLoading : false };
 }

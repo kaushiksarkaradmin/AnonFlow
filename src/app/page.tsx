@@ -21,7 +21,8 @@ export default function Home() {
   // Conditionally fetch posts only when the user is loaded
   const { posts, isLoading: isPostsLoading, addPost } = usePosts(!isUserLoading && !!user);
   
-  const { users: userProfiles, isLoading: isUsersLoading } = useUsers();
+  // Conditionally fetch users only when the user is loaded
+  const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
