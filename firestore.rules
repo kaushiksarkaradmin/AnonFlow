@@ -26,10 +26,15 @@ service cloud.firestore {
 
     // Only whitelisted users can read or write posts
     match /posts/{postId} {
-      allow read, list, create: if isSignedIn() && isAllowedUser();
+      allow read, create: if isSignedIn() && isAllowedUser();
       
       // Users can only update or delete their own posts
       allow update, delete: if isSignedIn() && isAllowedUser() && resource.data.userId == request.auth.uid;
+    }
+    
+    // Allow whitelisted users to list the posts collection
+    match /posts/{postId} {
+        allow list: if isSignedIn() && isAllowedUser();
     }
     
     // Management of the allowed users list.
