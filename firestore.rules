@@ -13,13 +13,14 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
     }
 
-    // Users can read their own profile and admins can read any profile
+    // Users can read their own profile.
+    // Whitelisted users can read any user's profile.
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAllowedUser());
+      allow get: if isSignedIn() && (request.auth.uid == userId || isAllowedUser());
       allow write: if isSignedIn() && request.auth.uid == userId;
     }
     
-    // Whitelisted users can read this collection to populate the UI
+    // Whitelisted users can list all users to populate the UI.
     match /users/{userId} {
       allow list: if isSignedIn() && isAllowedUser();
     }
@@ -30,11 +31,6 @@ service cloud.firestore {
       
       // Users can only update or delete their own posts
       allow update, delete: if isSignedIn() && isAllowedUser() && resource.data.userId == request.auth.uid;
-    }
-    
-    // Allow whitelisted users to list the posts collection
-    match /posts/{postId} {
-        allow list: if isSignedIn() && isAllowedUser();
     }
     
     // Management of the allowed users list.
