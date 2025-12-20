@@ -13,6 +13,7 @@ import { usePosts } from '@/hooks/use-posts';
 import type { UserProfile } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useAuthUser } from '@/hooks/use-auth-user';
+import { useNotificationSound } from '@/hooks/use-notification-sound';
 
 export default function Home() {
   const auth = useAuth();
@@ -23,6 +24,9 @@ export default function Home() {
   
   // Conditionally fetch users only when the user is loaded
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
+
+  // Initialize the notification sound hook
+  useNotificationSound(posts, user?.uid || null);
 
   const handleLogin = async () => {
     const provider = new GoogleAuthProvider();
