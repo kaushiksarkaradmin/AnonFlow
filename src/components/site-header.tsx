@@ -15,6 +15,12 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 
 export function SiteHeader() {
@@ -42,10 +48,19 @@ export function SiteHeader() {
 
         {user && (
           <div className="flex items-center gap-4">
-              <Avatar className="h-8 w-8">
-                  <AvatarImage src={user.photoURL || undefined} alt={user.displayName || ""} />
-                  <FallbackAvatar />
-              </Avatar>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.photoURL || undefined} alt={user.displayName || ""} />
+                      <FallbackAvatar />
+                  </Avatar>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>{user.displayName}</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
                   <Button variant="ghost" size="icon">
