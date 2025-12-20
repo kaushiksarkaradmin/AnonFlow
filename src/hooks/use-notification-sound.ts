@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Post } from '@/lib/types';
 
 // URL for a public domain notification sound
-const NOTIFICATION_SOUND_URL = 'https://www.soundjay.com/communication/sounds/message-1.mp3';
+const NOTIFICATION_SOUND_URL = 'https://cdn.freesound.org/previews/253/253887_3132313-lq.mp3';
 
 export function useNotificationSound(posts: Post[], currentUserId: string | null) {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
