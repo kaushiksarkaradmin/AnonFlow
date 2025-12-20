@@ -26,7 +26,7 @@ export function SiteHeader({ onClearHistory }: SiteHeaderProps) {
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6">
         <Link href="/" className="flex items-center space-x-2">
           <Icons.logo className="h-6 w-6 text-primary" />
-          <span className="font-bold text-lg text-primary font-headline">AnonFlow</span>
+          <span className="font-bold text-lg text-primary font-headline">Parivarik Chat</span>
         </Link>
         <AlertDialog>
           <AlertDialogTrigger asChild>

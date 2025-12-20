@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 
 export const metadata: Metadata = {
-  title: 'AnonFlow',
+  title: 'Parivarik Chat',
   description: 'Post anonymously to a shared timeline.',
 };
 
