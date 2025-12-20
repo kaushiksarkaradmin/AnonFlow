@@ -1,3 +1,4 @@
+
 'use client';
 
 import { formatDistanceToNow } from 'date-fns';
@@ -9,8 +10,6 @@ interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
   post: Post;
   displayName: string;
   currentDigitalToken: string | null;
-  onReply: (content: string, parentId: string) => void;
-  userTokenMap: Record<string, string>;
 }
 
 export function PostCard({ post, displayName, className, currentDigitalToken, ...props }: PostCardProps) {
@@ -18,14 +17,15 @@ export function PostCard({ post, displayName, className, currentDigitalToken, ..
 
   const getTimestamp = () => {
     if (!post.createdAt) return 'a moment ago';
+    // Check if it's a Firestore Timestamp
+    if (typeof post.createdAt === 'object' && post.createdAt !== null && 'toDate' in post.createdAt) {
+      return formatDistanceToNow((post.createdAt as any).toDate(), { addSuffix: true });
+    }
+    // Handle if it's already a Date object
     if (post.createdAt instanceof Date) {
       return formatDistanceToNow(post.createdAt, { addSuffix: true });
     }
-    // Handle Firestore ServerTimestamp
-    if ('toDate' in post.createdAt) {
-      return formatDistanceToNow((post.createdAt as any).toDate(), { addSuffix: true });
-    }
-    // Fallback for string or number
+     // Fallback for string or number
     return formatDistanceToNow(new Date(post.createdAt as any), { addSuffix: true });
   }
 

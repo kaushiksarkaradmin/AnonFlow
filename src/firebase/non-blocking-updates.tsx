@@ -1,3 +1,4 @@
+
 'use client';
     
 import {
@@ -5,9 +6,11 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  writeBatch,
   CollectionReference,
   DocumentReference,
   SetOptions,
+  Firestore,
 } from 'firebase/firestore';
 import { errorEmitter } from '@/firebase/error-emitter';
 import {FirestorePermissionError} from '@/firebase/errors';
@@ -85,5 +88,25 @@ export function deleteDocumentNonBlocking(docRef: DocumentReference) {
           operation: 'delete',
         })
       )
+    });
+}
+
+/**
+ * Initiates a batch delete operation for an array of document references.
+ * Does NOT await the write operation internally.
+ */
+export function batchDeleteDocumentsNonBlocking(firestore: Firestore, refs: DocumentReference[]) {
+    if (refs.length === 0) return;
+
+    const batch = writeBatch(firestore);
+    refs.forEach(ref => {
+        batch.delete(ref);
+    });
+
+    batch.commit().catch(error => {
+        // For batch operations, the error is more general.
+        // We can't easily tie it to a single doc.
+        console.error("Batch delete failed:", error);
+        // You could potentially emit a more generic error here if needed.
     });
 }
