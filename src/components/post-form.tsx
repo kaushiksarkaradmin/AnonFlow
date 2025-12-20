@@ -16,7 +16,6 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { submitPost } from '@/app/actions';
-import { Card, CardContent } from '@/components/ui/card';
 
 const PostSchema = z.object({
   content: z.string().min(1, "Post cannot be empty.").max(500, "Post must be 500 characters or less."),
@@ -48,10 +47,11 @@ export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: Po
 
     if (result.success && result.postContent) {
       if (!isReplyForm) {
-        toast({
-            title: 'Success!',
-            description: 'Your anonymous post is now live.',
-        });
+        // We can optionally keep a toast for success, but it's less common in chat apps.
+        // toast({
+        //     title: 'Success!',
+        //     description: 'Your anonymous post is now live.',
+        // });
       }
       onPostSuccess(result.postContent);
       form.reset();
@@ -64,19 +64,19 @@ export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: Po
     }
   }
   
-  const formContent = (
+  return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-4">
         <FormField
           control={form.control}
           name="content"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex-grow">
               <FormControl>
                 <Textarea
-                  placeholder={placeholder || "What's on your mind? Share it anonymously..."}
-                  className="resize-none border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-2 text-sm sm:text-base"
-                  rows={isReplyForm ? 2 : 4}
+                  placeholder={placeholder || "Type a message..."}
+                  className="resize-none rounded-2xl bg-secondary focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-0 p-2 text-sm sm:text-base"
+                  rows={1}
                   {...field}
                 />
               </FormControl>
@@ -84,30 +84,15 @@ export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: Po
             </FormItem>
           )}
         />
-        <div className="flex justify-end">
-          <Button type="submit" disabled={isSubmitting} size={isReplyForm ? 'sm' : 'default'}>
-            {isSubmitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="mr-2 h-4 w-4" />
-            )}
-            {isReplyForm ? 'Reply' : 'Post Anonymously'}
-          </Button>
-        </div>
+        <Button type="submit" disabled={isSubmitting} size="icon" className="rounded-full flex-shrink-0">
+          {isSubmitting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Send className="h-4 w-4" />
+          )}
+          <span className="sr-only">Send</span>
+        </Button>
       </form>
     </Form>
-  );
-
-
-  if (isReplyForm) {
-    return formContent;
-  }
-
-  return (
-    <Card>
-      <CardContent className="p-2 sm:p-4">
-        {formContent}
-      </CardContent>
-    </Card>
   );
 }
