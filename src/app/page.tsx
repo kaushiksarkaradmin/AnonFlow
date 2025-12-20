@@ -19,7 +19,7 @@ export default function Home() {
   const auth = useAuth();
   const { user, isUserLoading } = useAuthUser();
   
-  const { posts, isLoading: isPostsLoading, addPost } = usePosts(!isUserLoading && !!user);
+  const { posts, isLoading: isPostsLoading, addPost, deletePost } = usePosts(!isUserLoading && !!user);
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -51,6 +51,10 @@ export default function Home() {
       addPost({ content, userId: user.uid });
     }
   };
+
+  const handlePostDelete = (postId: string) => {
+    deletePost(postId);
+  }
 
   const sortedPosts = useMemo(() => {
     if (!posts) return [];
@@ -112,6 +116,7 @@ export default function Home() {
                   displayName={profile?.displayName || 'Anonymous'}
                   photoURL={profile?.photoURL}
                   currentUserId={user.uid}
+                  onDelete={handlePostDelete}
                 />
               )
             })}

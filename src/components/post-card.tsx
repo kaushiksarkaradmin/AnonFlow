@@ -3,18 +3,34 @@
 import { formatDistanceToNow } from 'date-fns';
 import type { Post } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { HTMLAttributes } from 'react';
+import { HTMLAttributes, useState } from 'react';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
+import { Button } from './ui/button';
+import { Trash2 } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface PostCardProps extends HTMLAttributes<HTMLDivElement> {
   post: Post;
   displayName: string;
   photoURL?: string | null;
   currentUserId: string | null;
+  onDelete: (postId: string) => void;
 }
 
-export function PostCard({ post, displayName, photoURL, className, currentUserId, ...props }: PostCardProps) {
+export function PostCard({ post, displayName, photoURL, className, currentUserId, onDelete, ...props }: PostCardProps) {
   const isCurrentUser = post.userId === currentUserId;
+  const [showDelete, setShowDelete] = useState(false);
+
 
   const getTimestamp = () => {
     if (!post.createdAt) return 'a moment ago';
@@ -36,15 +52,45 @@ export function PostCard({ post, displayName, photoURL, className, currentUserId
     </AvatarFallback>
   );
 
+  const handleDelete = () => {
+    onDelete(post.id);
+  }
+
   return (
     <div
       className={cn(
-        "flex w-full items-end gap-2",
+        "group flex w-full items-end gap-2",
         isCurrentUser ? "justify-end" : "justify-start",
         className
       )}
+      onMouseEnter={() => setShowDelete(true)}
+      onMouseLeave={() => setShowDelete(false)}
       {...props}
     >
+        {isCurrentUser && (
+            <div className={cn("flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity", { "opacity-100": showDelete })}>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className='h-7 w-7 text-muted-foreground hover:text-destructive'>
+                            <Trash2 className='h-4 w-4' />
+                            <span className='sr-only'>Delete Post</span>
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This action cannot be undone. This will permanently delete your message.
+                        </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90 text-destructive-foreground">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            </div>
+        )}
       {!isCurrentUser && (
         <Avatar className='h-8 w-8'>
             <AvatarImage src={photoURL || undefined} alt={displayName} />

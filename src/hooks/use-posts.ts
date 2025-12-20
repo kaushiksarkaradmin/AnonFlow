@@ -6,8 +6,8 @@ import {
   useCollection,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, serverTimestamp, query, orderBy } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, serverTimestamp, query, orderBy, doc } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 export function usePosts(enabled: boolean = true) {
   const firestore = useFirestore();
@@ -41,11 +41,23 @@ export function usePosts(enabled: boolean = true) {
     },
     [postsCollection]
   );
+
+  const deletePost = useCallback(
+    (postId: string) => {
+      if (!firestore) {
+        console.error("Firestore is not available.");
+        return;
+      }
+      const postRef = doc(firestore, 'posts', postId);
+      deleteDocumentNonBlocking(postRef);
+    },
+    [firestore]
+  );
   
   if (error) {
     // This error might be expected if the user isn't logged in yet, so we don't log it aggressively.
     // The UI will handle the loading state.
   }
 
-  return { posts: posts || [], isLoading: enabled ? isLoading : false, addPost };
+  return { posts: posts || [], isLoading: enabled ? isLoading : false, addPost, deletePost };
 }
