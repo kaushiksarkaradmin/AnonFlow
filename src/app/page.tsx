@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback } from 'react';
+import { useMemo, useCallback, useRef, useEffect } from 'react';
 import { useAuth } from '@/firebase';
 import { PostCard } from '@/components/post-card';
 import { PostForm } from '@/components/post-form';
@@ -21,6 +21,7 @@ export default function Home() {
   
   const { posts, isLoading: isPostsLoading, addPost } = usePosts(!isUserLoading && !!user);
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
+  const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const userProfileMap = useMemo(() => {
     if (!userProfiles) return {};
@@ -60,6 +61,12 @@ export default function Home() {
     });
   }, [posts]);
 
+  useEffect(() => {
+    if (scrollAreaRef.current) {
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+    }
+  }, [sortedPosts, isPostsLoading]);
+
   if (isUserLoading || (user && isUsersLoading)) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
@@ -85,7 +92,7 @@ export default function Home() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       <SiteHeader />
-      <ScrollArea className="flex-grow">
+      <ScrollArea className="flex-grow" viewportRef={scrollAreaRef}>
         <main className="container mx-auto max-w-2xl flex-grow px-4 py-8">
           <div className="space-y-4">
             {isPostsLoading && (
