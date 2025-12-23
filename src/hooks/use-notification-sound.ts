@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Post } from '@/lib/types';
+import { useUser } from '@/firebase';
 
 // URL for a public domain notification sound for background notifications
 const BACKGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/512/512968_6142149-lq.mp3';
@@ -12,7 +13,7 @@ const FOREGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/4
 const NOTIFICATION_ICON_URL = '/logo.svg';
 
 export function useNotifications(
-  posts: Post[] | null, // Can be null initially
+  posts: Post[] | null,
   currentUserId: string | null,
   getUserProfile: (userId: string) => { displayName: string; photoURL?: string | null } | undefined
 ) {
@@ -59,7 +60,7 @@ export function useNotifications(
       const now = new Date();
       const timeDiff = now.getTime() - postDate.getTime();
 
-      // Only notify for recent posts (e.g., within the last 10 seconds)
+      // Only notify for recent posts (e.g., within the last 10 seconds) to avoid old notifications
       if (timeDiff < 10000) {
         if (document.hidden) {
           // App is in the background: play sound and show system notification
@@ -77,9 +78,10 @@ export function useNotifications(
               const notification = new Notification(senderName, {
                 body: latestPost.content,
                 icon: senderProfile?.photoURL || NOTIFICATION_ICON_URL,
-                tag: 'parivarik-chat-message', // Use a tag to prevent multiple notifications
+                tag: 'parivarik-chat-message', // Use a tag to prevent multiple notifications for the same event
                 silent: true, // The sound is handled by the Audio element
               });
+              // Automatically close the notification after a few seconds
               setTimeout(() => notification.close(), 5000);
             } catch (e) {
               console.error("Error creating notification:", e);
