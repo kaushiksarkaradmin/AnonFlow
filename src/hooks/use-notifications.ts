@@ -3,8 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Post } from '@/lib/types';
 
-// URL for a public domain notification sound
-const NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/512/512968_6142149-lq.mp3';
+// URL for a public domain notification sound from freesound.org
+const NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/415/415764_6142149-lq.mp3';
 
 // Icon for the notification
 const NOTIFICATION_ICON_URL = '/logo.svg';
