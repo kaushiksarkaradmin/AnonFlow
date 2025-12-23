@@ -13,7 +13,7 @@ import { usePosts } from '@/hooks/use-posts';
 import type { UserProfile } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useAuthUser } from '@/hooks/use-auth-user';
-import { useNotifications } from '@/hooks/use-notification-sound';
+import { useNotifications } from '@/hooks/use-notifications';
 
 export default function Home() {
   const auth = useAuth();
@@ -27,7 +27,7 @@ export default function Home() {
 
   useEffect(() => {
     // This effect should only run on the client
-    const audio = new Audio('https://freesound.org/data/previews/415/415764_6142149-lq.mp3');
+    const audio = new Audio('https://freesound.org/data/previews/66/66717_634166-lq.mp3');
     audio.preload = 'auto';
     setSentAudio(audio);
   }, []);
