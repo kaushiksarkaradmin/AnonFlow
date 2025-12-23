@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Post } from '@/lib/types';
 
 // URL for a public domain notification sound for background notifications
-const BACKGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/341/341695_5737253-lq.mp3';
+const BACKGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/131/131660_2398463-lq.mp3';
 // URL for a quick "pop" sound for foreground notifications
 const FOREGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/66/66717_634166-lq.mp3';
 
@@ -52,8 +52,10 @@ export function useNotifications(
     }
 
     const previousPosts = previousPostsRef.current || [];
+    
+    // Check for new posts that were not in the previous state and are not from the current user.
     const newPosts = posts.filter(
-        p => !previousPosts.some(prev => prev.id === p.id) && p.userId !== currentUserId
+      p => !previousPosts.some(prev => prev.id === p.id) && p.userId !== currentUserId
     );
 
     if (newPosts.length > 0) {
