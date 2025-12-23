@@ -22,7 +22,7 @@ import {
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { submitPost } from '@/app/actions';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const PostSchema = z.object({
   content: z.string().min(1, "Post cannot be empty.").max(500, "Post must be 500 characters or less."),
@@ -34,9 +34,19 @@ type PostFormProps = {
   isReplyForm?: boolean;
 };
 
+const CHAT_SENT_SOUND_URL = 'https://freesound.org/data/previews/415/415764_6142149-lq.mp3';
+
+
 export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: PostFormProps) {
   const { toast } = useToast();
   const [showPicker, setShowPicker] = useState(false);
+  const [sentAudio, setSentAudio] = useState<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    const audio = new Audio(CHAT_SENT_SOUND_URL);
+    audio.preload = 'auto';
+    setSentAudio(audio);
+  }, []);
 
   const form = useForm<z.infer<typeof PostSchema>>({
     resolver: zodResolver(PostSchema),
@@ -54,6 +64,9 @@ export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: Po
     const result = await submitPost(formData);
 
     if (result.success && result.postContent) {
+      if (sentAudio) {
+        sentAudio.play().catch(err => console.error("Error playing sent sound:", err));
+      }
       onPostSuccess(result.postContent);
       form.reset();
     } else {
