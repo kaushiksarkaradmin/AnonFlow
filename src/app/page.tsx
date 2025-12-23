@@ -23,7 +23,14 @@ export default function Home() {
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const [initialLoad, setInitialLoad] = useState(true);
+  const [sentAudio, setSentAudio] = useState<HTMLAudioElement | null>(null);
 
+  useEffect(() => {
+    // This effect should only run on the client
+    const audio = new Audio('https://freesound.org/data/previews/415/415764_6142149-lq.mp3');
+    audio.preload = 'auto';
+    setSentAudio(audio);
+  }, []);
 
   const userProfileMap = useMemo(() => {
     if (!userProfiles) return {};
@@ -50,6 +57,9 @@ export default function Home() {
 
   const handlePostSubmit = (content: string) => {
     if (user) {
+      if (sentAudio) {
+        sentAudio.play().catch(err => console.error("Error playing sent sound:", err));
+      }
       addPost({ content, userId: user.uid });
     }
   };
@@ -77,7 +87,7 @@ export default function Home() {
     const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
     if (viewport) {
       // On initial load, always scroll to the bottom.
-      if (initialLoad && !isPostsLoading && posts.length > 0) {
+      if (initialLoad && !isPostsLoading && sortedPosts.length > 0) {
         viewport.scrollTop = viewport.scrollHeight;
         setInitialLoad(false); // We've done the initial scroll.
         return;
@@ -85,11 +95,11 @@ export default function Home() {
 
       // For subsequent updates, only auto-scroll if user is already near the bottom.
       const isScrolledToBottom = viewport.scrollHeight - viewport.clientHeight <= viewport.scrollTop + 100; // a bit of tolerance
-      if (isScrolledToBottom) {
+      if (!initialLoad && isScrolledToBottom) {
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-  }, [sortedPosts, isPostsLoading, initialLoad, posts.length]);
+  }, [sortedPosts, isPostsLoading, initialLoad]);
 
   if (isUserLoading || (user && isUsersLoading)) {
     return (
