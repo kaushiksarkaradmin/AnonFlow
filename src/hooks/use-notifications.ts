@@ -3,12 +3,8 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Post } from '@/lib/types';
 
-// URL for a public domain notification sound for background notifications
 const BACKGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/131/131660_2398463-lq.mp3';
-// URL for a quick "pop" sound for foreground notifications
 const FOREGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/66/66717_634166-lq.mp3';
-
-// Icon for the notification
 const NOTIFICATION_ICON_URL = '/logo.svg';
 
 export function useNotifications(
@@ -16,93 +12,105 @@ export function useNotifications(
   currentUserId: string | null,
   getUserProfile: (userId: string) => { displayName: string; photoURL?: string | null } | undefined
 ) {
-  const [backgroundAudio, setBackgroundAudio] = useState<HTMLAudioElement | null>(null);
-  const [foregroundAudio, setForegroundAudio] = useState<HTMLAudioElement | null>(null);
+  // Audio অবজেক্টের জন্য useRef ব্যবহার করা ভালো, কারণ এটি রেন্ডারিং-এর উপর নির্ভরশীল নয়
+  const backgroundAudioRef = useRef<HTMLAudioElement | null>(null);
+  const foregroundAudioRef = useRef<HTMLAudioElement | null>(null);
   const previousPostsRef = useRef<Post[] | null>(posts);
   const [permission, setPermission] = useState<NotificationPermission>('default');
 
+  // ১. অডিও ইনিশিয়ালাইজেশন (একবারই হবে)
   useEffect(() => {
-    // This effect runs only on the client side to safely create the Audio objects
-    // and check for notification permissions.
-    const bgAudio = new Audio(BACKGROUND_NOTIFICATION_SOUND_URL);
-    bgAudio.preload = 'auto';
-    setBackgroundAudio(bgAudio);
-
-    const fgAudio = new Audio(FOREGROUND_NOTIFICATION_SOUND_URL);
-    fgAudio.preload = 'auto';
-    setForegroundAudio(fgAudio);
+    // অডিও এলিমেন্ট তৈরি
+    backgroundAudioRef.current = new Audio(BACKGROUND_NOTIFICATION_SOUND_URL);
+    foregroundAudioRef.current = new Audio(FOREGROUND_NOTIFICATION_SOUND_URL);
+    
+    // প্রি-লোড সেট করা
+    backgroundAudioRef.current.preload = 'auto';
+    foregroundAudioRef.current.preload = 'auto';
 
     if ('Notification' in window) {
       setPermission(Notification.permission);
     }
   }, []);
 
-  // Effect to request permission when the component mounts if it's default
+  // ২. পারমিশন রিকোয়েস্ট
   useEffect(() => {
     if (permission === 'default' && 'Notification' in window) {
       Notification.requestPermission().then(setPermission);
     }
   }, [permission]);
 
-
+  // ৩. মেইন নোটিফিকেশন লজিক
   useEffect(() => {
     if (!posts || !currentUserId) {
-        previousPostsRef.current = posts;
-        return;
+      previousPostsRef.current = posts;
+      return;
     }
 
     const previousPosts = previousPostsRef.current || [];
     
-    // Check for new posts that were not in the previous state and are not from the current user.
+    // নতুন পোস্ট ফিল্টার করা
     const newPosts = posts.filter(
       p => !previousPosts.some(prev => prev.id === p.id) && p.userId !== currentUserId
     );
 
     if (newPosts.length > 0) {
-        const latestPost = newPosts[newPosts.length - 1];
+      // শুধু একদম লেটেস্ট মেসেজটি নেওয়া
+      const latestPost = newPosts[newPosts.length - 1];
+      
+      const postDate = (latestPost.createdAt as any)?.toDate ? (latestPost.createdAt as any).toDate() : new Date(latestPost.createdAt as any);
+      const now = new Date();
+      const timeDiff = now.getTime() - postDate.getTime();
+
+      // ১০ সেকেন্ডের বেশি পুরনো হলে নোটিফিকেশন বাজবে না (স্মার্ট লজিক)
+      if (timeDiff < 10000) {
         
-        const postDate = (latestPost.createdAt as any)?.toDate ? (latestPost.createdAt as any).toDate() : new Date(latestPost.createdAt as any);
-        const now = new Date();
-        const timeDiff = now.getTime() - postDate.getTime();
+        // --- সাউন্ড প্লে করার ফাংশন ---
+        const playSound = (audioRef: React.MutableRefObject<HTMLAudioElement | null>) => {
+          if (audioRef.current) {
+            // সাউন্ড রিসেট করা যাতে পরপর মেসেজ আসলে সমস্যা না হয়
+            audioRef.current.currentTime = 0; 
+            audioRef.current.play().catch(error => {
+              console.warn("Audio play blocked. User interaction needed.", error);
+            });
+          }
+        };
 
-        // Only notify for recent posts (e.g., within the last 10 seconds) to avoid old notifications on load
-        if (timeDiff < 10000) {
-            if (document.hidden) {
-                // App is in the background: play sound and show system notification
-                if (backgroundAudio) {
-                    backgroundAudio.play().catch(error => {
-                        console.error("Background audio play was prevented:", error);
-                    });
-                }
+        if (document.hidden) {
+          // --- ব্যাকগ্রাউন্ড মোড ---
+          playSound(backgroundAudioRef);
 
-                if (permission === 'granted' && 'Notification' in window) {
-                    const senderProfile = getUserProfile(latestPost.userId);
-                    const senderName = senderProfile?.displayName || 'New Message';
-                    
-                    try {
-                        const notification = new Notification(senderName, {
-                            body: latestPost.content,
-                            icon: senderProfile?.photoURL || NOTIFICATION_ICON_URL,
-                            tag: 'parivarik-chat-message', // Use a tag to prevent multiple notifications for the same event
-                            silent: true, // The sound is handled by the Audio element
-                        });
-                        // Automatically close the notification after a few seconds
-                        setTimeout(() => notification.close(), 5000);
-                    } catch (e) {
-                        console.error("Error creating notification:", e);
-                    }
-                }
-            } else {
-                // App is in the foreground: just play the "pop" sound
-                if (foregroundAudio) {
-                    foregroundAudio.play().catch(error => {
-                        console.error("Foreground audio play was prevented:", error);
-                    });
-                }
+          if (permission === 'granted' && 'Notification' in window) {
+            const senderProfile = getUserProfile(latestPost.userId);
+            const senderName = senderProfile?.displayName || 'New Message';
+            
+            try {
+              const notification = new Notification(senderName, {
+                body: latestPost.content,
+                icon: senderProfile?.photoURL || NOTIFICATION_ICON_URL,
+                tag: 'messenger-notification', // ট্যাগ ব্যবহার করলে আগের নোটিফিকেশন রিপ্লেস হবে
+                silent: true, // আমরা অডিও এলিমেন্ট দিয়ে সাউন্ড বাজাচ্ছি, তাই এটি সাইলেন্ট থাকবে
+              });
+              
+              notification.onclick = () => {
+                window.focus();
+                notification.close();
+              };
+              
+              setTimeout(() => notification.close(), 5000);
+            } catch (e) {
+              console.error("Notification Error:", e);
             }
+          }
+        } else {
+          // --- ফোরগ্রাউন্ড মোড ---
+          playSound(foregroundAudioRef);
         }
+      }
     }
 
+    // সবশেষে কারেন্ট পোস্ট আপডেট করা
     previousPostsRef.current = posts;
-  }, [posts, backgroundAudio, foregroundAudio, currentUserId, permission, getUserProfile]);
+    
+  }, [posts, currentUserId, permission, getUserProfile]);
 }
