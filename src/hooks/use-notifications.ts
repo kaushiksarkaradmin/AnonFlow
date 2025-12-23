@@ -2,12 +2,11 @@
 
 import { useEffect, useRef, useState } from 'react';
 import type { Post } from '@/lib/types';
-import { useUser } from '@/firebase';
 
 // URL for a public domain notification sound for background notifications
-const BACKGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/512/512968_6142149-lq.mp3';
+const BACKGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/341/341695_5737253-lq.mp3';
 // URL for a quick "pop" sound for foreground notifications
-const FOREGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/415/415764_6142149-lq.mp3';
+const FOREGROUND_NOTIFICATION_SOUND_URL = 'https://freesound.org/data/previews/66/66717_634166-lq.mp3';
 
 // Icon for the notification
 const NOTIFICATION_ICON_URL = '/logo.svg';
