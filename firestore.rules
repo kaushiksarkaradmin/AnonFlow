@@ -24,12 +24,12 @@ service cloud.firestore {
     match /posts/{postId} {
       allow read, create: if isSignedIn() && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email));
       
-      // A user can update a post if they are the author, OR if they are only modifying the 'seenBy' field.
-      allow update: if isSignedIn() 
-                    && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
+      // A user can update a post if they are the author (and can change anything), 
+      // OR if they are an allowed user only modifying the 'seenBy' field.
+      allow update: if isSignedIn() && exists(/databases/$(database)/documents/allowedUsers/$(request.auth.token.email))
                     && (
-                      resource.data.userId == request.auth.uid 
-                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']))
+                        (resource.data.userId == request.auth.uid) ||
+                        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['seenBy']))
                     );
 
       // Users can only delete their own posts.
