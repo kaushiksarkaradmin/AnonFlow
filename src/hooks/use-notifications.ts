@@ -18,7 +18,7 @@ export function useNotifications(
 ) {
   const [backgroundAudio, setBackgroundAudio] = useState<HTMLAudioElement | null>(null);
   const [foregroundAudio, setForegroundAudio] = useState<HTMLAudioElement | null>(null);
-  const previousPostCount = useRef(posts?.length || 0);
+  const previousPostsRef = useRef<Post[] | null>(posts);
   const [permission, setPermission] = useState<NotificationPermission>('default');
 
   useEffect(() => {
@@ -46,57 +46,61 @@ export function useNotifications(
 
 
   useEffect(() => {
-    // Ensure posts is not null and has grown
-    if (!posts || posts.length <= previousPostCount.current) {
-      previousPostCount.current = posts?.length || 0;
-      return;
+    if (!posts || !currentUserId) {
+        previousPostsRef.current = posts;
+        return;
     }
 
-    const latestPost = posts[posts.length - 1];
+    const previousPosts = previousPostsRef.current || [];
+    const newPosts = posts.filter(
+        p => !previousPosts.some(prev => prev.id === p.id) && p.userId !== currentUserId
+    );
 
-    if (latestPost && latestPost.userId !== currentUserId) {
-      const postDate = (latestPost.createdAt as any)?.toDate ? (latestPost.createdAt as any).toDate() : new Date(latestPost.createdAt as any);
-      const now = new Date();
-      const timeDiff = now.getTime() - postDate.getTime();
+    if (newPosts.length > 0) {
+        const latestPost = newPosts[newPosts.length - 1];
+        
+        const postDate = (latestPost.createdAt as any)?.toDate ? (latestPost.createdAt as any).toDate() : new Date(latestPost.createdAt as any);
+        const now = new Date();
+        const timeDiff = now.getTime() - postDate.getTime();
 
-      // Only notify for recent posts (e.g., within the last 10 seconds) to avoid old notifications
-      if (timeDiff < 10000) {
-        if (document.hidden) {
-          // App is in the background: play sound and show system notification
-          if (backgroundAudio) {
-            backgroundAudio.play().catch(error => {
-              console.error("Background audio play was prevented:", error);
-            });
-          }
+        // Only notify for recent posts (e.g., within the last 10 seconds) to avoid old notifications on load
+        if (timeDiff < 10000) {
+            if (document.hidden) {
+                // App is in the background: play sound and show system notification
+                if (backgroundAudio) {
+                    backgroundAudio.play().catch(error => {
+                        console.error("Background audio play was prevented:", error);
+                    });
+                }
 
-          if (permission === 'granted' && 'Notification' in window) {
-            const senderProfile = getUserProfile(latestPost.userId);
-            const senderName = senderProfile?.displayName || 'New Message';
-            
-            try {
-              const notification = new Notification(senderName, {
-                body: latestPost.content,
-                icon: senderProfile?.photoURL || NOTIFICATION_ICON_URL,
-                tag: 'parivarik-chat-message', // Use a tag to prevent multiple notifications for the same event
-                silent: true, // The sound is handled by the Audio element
-              });
-              // Automatically close the notification after a few seconds
-              setTimeout(() => notification.close(), 5000);
-            } catch (e) {
-              console.error("Error creating notification:", e);
+                if (permission === 'granted' && 'Notification' in window) {
+                    const senderProfile = getUserProfile(latestPost.userId);
+                    const senderName = senderProfile?.displayName || 'New Message';
+                    
+                    try {
+                        const notification = new Notification(senderName, {
+                            body: latestPost.content,
+                            icon: senderProfile?.photoURL || NOTIFICATION_ICON_URL,
+                            tag: 'parivarik-chat-message', // Use a tag to prevent multiple notifications for the same event
+                            silent: true, // The sound is handled by the Audio element
+                        });
+                        // Automatically close the notification after a few seconds
+                        setTimeout(() => notification.close(), 5000);
+                    } catch (e) {
+                        console.error("Error creating notification:", e);
+                    }
+                }
+            } else {
+                // App is in the foreground: just play the "pop" sound
+                if (foregroundAudio) {
+                    foregroundAudio.play().catch(error => {
+                        console.error("Foreground audio play was prevented:", error);
+                    });
+                }
             }
-          }
-        } else {
-          // App is in the foreground: just play the "pop" sound
-          if (foregroundAudio) {
-            foregroundAudio.play().catch(error => {
-              console.error("Foreground audio play was prevented:", error);
-            });
-          }
         }
-      }
     }
 
-    previousPostCount.current = posts.length;
+    previousPostsRef.current = posts;
   }, [posts, backgroundAudio, foregroundAudio, currentUserId, permission, getUserProfile]);
 }
