@@ -7,10 +7,11 @@ export type Post = {
   createdAt: FieldValue | Date;
   parentId?: string;
   replies?: Post[];
+  seenBy?: string[]; // Array of user IDs
 };
 
 export type UserProfile = {
-  id: string;
+  id:string;
   displayName: string;
   email: string;
   photoURL?: string;

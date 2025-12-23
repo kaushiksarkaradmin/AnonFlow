@@ -19,7 +19,7 @@ export default function Home() {
   const auth = useAuth();
   const { user, isUserLoading } = useAuthUser();
   
-  const { posts, isLoading: isPostsLoading, addPost, deletePost } = usePosts(!isUserLoading && !!user);
+  const { posts, isLoading: isPostsLoading, addPost, deletePost, markAsSeen } = usePosts(!isUserLoading && !!user);
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -56,6 +56,12 @@ export default function Home() {
     deletePost(postId);
   }
 
+  const handlePostSeen = useCallback((postId: string) => {
+    if (user) {
+      markAsSeen(postId, user.uid);
+    }
+  }, [user, markAsSeen]);
+
   const sortedPosts = useMemo(() => {
     if (!posts) return [];
     return [...posts].sort((a, b) => {
@@ -68,7 +74,10 @@ export default function Home() {
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
     if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight;
+      const isScrolledToBottom = viewport.scrollHeight - viewport.clientHeight <= viewport.scrollTop + 1;
+      if(isScrolledToBottom) {
+        viewport.scrollTop = viewport.scrollHeight;
+      }
     }
   }, [sortedPosts, isPostsLoading]);
 
@@ -109,6 +118,10 @@ export default function Home() {
             )}
             {!isPostsLoading && sortedPosts.map(post => {
               const profile = userProfileMap[post.userId];
+              const seenByUsers = (post.seenBy || [])
+                .map(userId => userProfileMap[userId])
+                .filter((p): p is UserProfile => p !== undefined);
+
               return (
                 <PostCard
                   key={post.id}
@@ -117,6 +130,8 @@ export default function Home() {
                   photoURL={profile?.photoURL}
                   currentUserId={user.uid}
                   onDelete={handlePostDelete}
+                  onSeen={handlePostSeen}
+                  seenByUsers={seenByUsers}
                 />
               )
             })}
