@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { useAuth } from '@/firebase';
 import { PostCard } from '@/components/post-card';
 import { PostForm } from '@/components/post-form';
@@ -22,6 +22,8 @@ export default function Home() {
   const { posts, isLoading: isPostsLoading, addPost, deletePost, markAsSeen } = usePosts(!isUserLoading && !!user);
   const { users: userProfiles, isLoading: isUsersLoading } = useUsers(!isUserLoading && !!user);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const [initialLoad, setInitialLoad] = useState(true);
+
 
   const userProfileMap = useMemo(() => {
     if (!userProfiles) return {};
@@ -74,12 +76,20 @@ export default function Home() {
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
     if (viewport) {
-      const isScrolledToBottom = viewport.scrollHeight - viewport.clientHeight <= viewport.scrollTop + 1;
-      if(isScrolledToBottom) {
+      // On initial load, always scroll to the bottom.
+      if (initialLoad && !isPostsLoading && posts.length > 0) {
+        viewport.scrollTop = viewport.scrollHeight;
+        setInitialLoad(false); // We've done the initial scroll.
+        return;
+      }
+
+      // For subsequent updates, only auto-scroll if user is already near the bottom.
+      const isScrolledToBottom = viewport.scrollHeight - viewport.clientHeight <= viewport.scrollTop + 100; // a bit of tolerance
+      if (isScrolledToBottom) {
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-  }, [sortedPosts, isPostsLoading]);
+  }, [sortedPosts, isPostsLoading, initialLoad, posts.length]);
 
   if (isUserLoading || (user && isUsersLoading)) {
     return (
