@@ -13,7 +13,7 @@ import { usePosts } from '@/hooks/use-posts';
 import type { UserProfile } from '@/lib/types';
 import { useUsers } from '@/hooks/use-users';
 import { useAuthUser } from '@/hooks/use-auth-user';
-import { useNotifications } from '@/hooks/use-notifications';
+import { useNotifications } from '@/hooks/use-notification-sound';
 
 export default function Home() {
   const auth = useAuth();
