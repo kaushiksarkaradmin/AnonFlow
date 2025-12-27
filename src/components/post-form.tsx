@@ -71,7 +71,7 @@ export function PostForm({ onPostSuccess, placeholder, isReplyForm = false }: Po
   
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2 sm:gap-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="flex items-start gap-2">
         <div className="relative flex-grow">
           <FormField
             control={form.control}

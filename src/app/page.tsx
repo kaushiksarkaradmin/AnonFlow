@@ -127,7 +127,7 @@ export default function Home() {
     <div className="flex flex-col h-screen bg-background text-foreground">
       <SiteHeader />
       <ScrollArea className="flex-grow" ref={scrollAreaRef}>
-        <main className="container mx-auto max-w-2xl flex-grow px-4 py-8">
+        <main className="container mx-auto max-w-2xl flex-grow px-2 sm:px-4 py-8">
           <div className="space-y-4">
             {isPostsLoading && (
               <>
@@ -158,7 +158,7 @@ export default function Home() {
           </div>
         </main>
       </ScrollArea>
-       <footer className="p-4 bg-background border-t">
+       <footer className="p-2 sm:p-4 bg-background border-t">
           <div className="container mx-auto max-w-2xl">
             <PostForm onPostSuccess={handlePostSubmit} />
           </div>
